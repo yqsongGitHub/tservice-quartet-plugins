@@ -1,6 +1,6 @@
 # External Tools
-- [RNASEQ2REPORT](#RNASEQ2REPORT)
-- [EXP2QCDT](#EXP2QCDT)
+- [RNASEQ2REPORT: Convert RNA-Seq Result Files to a Report](#RNASEQ2REPORT)
+- [EXP2QCDT: Convert Expression Table to a Data Table of Quality Control for Quartet](#EXP2QCDT)
 
 ## RNASEQ2REPORT
 ### Arguments
