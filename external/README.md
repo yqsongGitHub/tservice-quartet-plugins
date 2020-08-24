@@ -2,7 +2,7 @@
 - [RNASEQ2REPORT: Convert RNA-Seq Result Files to a Report](#RNASEQ2REPORT)
 - [EXP2QCDT: Convert Expression Table to a Data Table of Quality Control for Quartet](#EXP2QCDT)
 
-## RNASEQ2REPORT
+## [RNASEQ2REPORT](./rnaseq2report.R)
 ### Arguments
 #### exp_table_file
 It is a merged gene expression table.
@@ -27,7 +27,7 @@ It is a destination directory.
 rnaseq2report.R log2fpkm.txt phenotye.txt ./
 ```
 
-## [EXP2QCDT](https://github.com/clinico-omics/exp2qcdt)
+## [EXP2QCDT](./exp2qcdt.sh)
 Convert expression table to qc data table.
 
 ### Installation
