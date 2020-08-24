@@ -37,13 +37,13 @@ get_rna_report_table <- function(df_exp, rt_group, gene_covert_table, main_dir) 
     pc <- as.data.frame(a$x) # convert to data.frame
 
     if (is.null(rt_group)) {
-      pc = pc
+      pc <- pc
     } else {
-      pc$group = rt_group$group
+      pc$group <- rt_group$group
     }
 
-    df_pc = data.frame(cbind(row.names(pc), pc), stringsAsFactors = FALSE)
-    colnames(df_pc)[1] = 'SAMPLE_ID'
+    df_pc <- data.frame(cbind(row.names(pc), pc), stringsAsFactors = FALSE)
+    colnames(df_pc)[1] <- "SAMPLE_ID"
     return(df_pc)
   }
 
@@ -72,20 +72,20 @@ get_rna_report_table <- function(df_exp, rt_group, gene_covert_table, main_dir) 
 
     # all fc
     tempOutput$PvalueLog <- -log10(tempOutput$P.Value)
-    tempOutput$group <- 'non-deg'
+    tempOutput$group <- "non-deg"
     tempOutput$group[intersect(which(tempOutput$P.Value < 0.05),
-                               which(abs(tempOutput$logFC) >= 1))] <- 'deg'
+                               which(abs(tempOutput$logFC) >= 1))] <- "deg"
     all_gene_fc = data.frame(cbind(row.names(tempOutput), tempOutput), stringsAsFactors = FALSE)
-    colnames(all_gene_fc)[1] = 'GENE_ID'
+    colnames(all_gene_fc)[1] = "GENE_ID"
 
     # deg fc
     sig_fc <- tempOutput[intersect(which(abs(tempOutput$logFC) >= 1), which(tempOutput$P.Value < 0.05)),]
     df_sig_fc <- data.frame(cbind(row.names(sig_fc), sig_fc), stringsAsFactors = FALSE)
-    colnames(df_sig_fc)[1] <- 'GENE_ID'
+    colnames(df_sig_fc)[1] <- "GENE_ID"
 
     sig_exp <- df_exp[row.names(df_sig_fc),]
     df_sig_exp <- data.frame(cbind(row.names(sig_exp), sig_exp), stringsAsFactors = FALSE)
-    colnames(df_sig_exp)[1] <- 'GENE_ID'
+    colnames(df_sig_exp)[1] <- "GENE_ID"
 
     deg_mat_list <- list(all_gene_fc, df_sig_exp)
     return(deg_mat_list)
@@ -108,17 +108,17 @@ get_rna_report_table <- function(df_exp, rt_group, gene_covert_table, main_dir) 
     df_ego_mf <- ego_mf@result
 
     # kegg enrich
-    kk <- enrichKEGG(gene = gene_list_entrezid, organism = 'hsa', pvalueCutoff = 0.05)
+    kk <- enrichKEGG(gene = gene_list_entrezid, organism = "hsa", pvalueCutoff = 0.05)
     df_kk <- kk@result
 
-    write.table(df_ego_cc, file = paste(main_dir, '/FunctionAnalysis/go_cc.txt', sep = ''),
-                row.names = FALSE, col.names = TRUE, sep = '\t', quote = FALSE)
-    write.table(df_ego_bp, file = paste(main_dir, '/FunctionAnalysis/go_bp.txt', sep = ''),
-                row.names = FALSE, col.names = TRUE, sep = '\t', quote = FALSE)
-    write.table(df_ego_mf, file = paste(main_dir, '/FunctionAnalysis/go_mf.txt', sep = ''),
-                row.names = FALSE, col.names = TRUE, sep = '\t', quote = FALSE)
-    write.table(df_kk, file = paste(main_dir, '/FunctionAnalysis/kegg.txt', sep = ''),
-                row.names = FALSE, col.names = TRUE, sep = '\t', quote = FALSE)
+    write.table(df_ego_cc, file = paste(main_dir, "/FunctionAnalysis/go_cc.txt", sep = ""),
+                row.names = FALSE, col.names = TRUE, sep = "\t", quote = FALSE)
+    write.table(df_ego_bp, file = paste(main_dir, "/FunctionAnalysis/go_bp.txt", sep = ""),
+                row.names = FALSE, col.names = TRUE, sep = "\t", quote = FALSE)
+    write.table(df_ego_mf, file = paste(main_dir, "/FunctionAnalysis/go_mf.txt", sep = ""),
+                row.names = FALSE, col.names = TRUE, sep = "\t", quote = FALSE)
+    write.table(df_kk, file = paste(main_dir, "/FunctionAnalysis/kegg.txt", sep = ""),
+                row.names = FALSE, col.names = TRUE, sep = "\t", quote = FALSE)
   }
 
 
@@ -128,30 +128,30 @@ get_rna_report_table <- function(df_exp, rt_group, gene_covert_table, main_dir) 
     df_exp_id <- data.frame(cbind(row.names(df_exp), df_exp), stringsAsFactors = FALSE)
     colnames(df_exp_id)[1] <- "Ensembl_ID"
     df_exp_mul_id <- merge(gene_covert_table, df_exp_id, by = "Ensembl_ID")
-    write.table(df_exp_mul_id, file = paste(main_dir, '/GeneExpression/gene_expression_fpkm.txt', sep = ''),
-                row.names = FALSE, col.names = TRUE, sep = '\t', quote = FALSE)
+    write.table(df_exp_mul_id, file = paste(main_dir, "/GeneExpression/gene_expression_fpkm.txt", sep = ""),
+                row.names = FALSE, col.names = TRUE, sep = "\t", quote = FALSE)
 
     # box plot
     df_exp_d <- df_exp[apply(df_exp, 1, function(x) { median(x) > 0 }),]
     box_exp <- gather(df_exp_d)
     group_box <- rep(rt_group$group, each = dim(df_exp_d)[1])
     df_box <- data.frame(cbind(box_exp, group_box), stringsAsFactors = FALSE)
-    colnames(df_box) <- c('sample_id', 'expression', 'group')
+    colnames(df_box) <- c("sample_id", "expression", "group")
     df_box$expression <- as.numeric(df_box$expression)
-    write.table(df_box, file = paste(main_dir, '/GeneExpression/all_gene_exp.txt', sep = ''),
-                row.names = FALSE, col.names = TRUE, sep = '\t', quote = FALSE)
+    write.table(df_box, file = paste(main_dir, "/GeneExpression/all_gene_exp.txt", sep = ""),
+                row.names = FALSE, col.names = TRUE, sep = "\t", quote = FALSE)
 
     # hca
-    rt_hclust <- hclust(d = dist(t(df_exp)), method = 'ward.D')
+    rt_hclust <- hclust(d = dist(t(df_exp)), method = "ward.D")
     rt_hclust_dend <- as.dendrogram(rt_hclust)
     new_order <- order.dendrogram(rt_hclust_dend)
 
     # pca
     mat_group <- data.frame(cbind(colnames(df_exp)[7:12], "group_list"), stringsAsFactors = FALSE)
-    colnames(mat_group) <- c('samples_id', 'group')
+    colnames(mat_group) <- c("samples_id", "group")
     all_gene_pca <- pre_pca_data(df_exp, mat_group)
-    write.table(all_gene_pca, file = paste(main_dir, '/GeneExpression/all_gene_pca.txt', sep = ''),
-                row.names = FALSE, col.names = TRUE, sep = '\t', quote = FALSE)
+    write.table(all_gene_pca, file = paste(main_dir, "/GeneExpression/all_gene_pca.txt", sep = ""),
+                row.names = FALSE, col.names = TRUE, sep = "\t", quote = FALSE)
   } else {
     # basic output
     # expression table output
@@ -159,43 +159,43 @@ get_rna_report_table <- function(df_exp, rt_group, gene_covert_table, main_dir) 
     colnames(df_exp_id)[1] <- "Ensembl_ID"
     df_exp_mul_id <- merge(gene_covert_table, df_exp_id, by = "Ensembl_ID")
 
-    write.table(df_exp_mul_id, file = paste(main_dir, '/GeneExpression/gene_expression_fpkm.txt', sep = ''),
-                row.names = FALSE, col.names = TRUE, sep = '\t', quote = FALSE)
+    write.table(df_exp_mul_id, file = paste(main_dir, "/GeneExpression/gene_expression_fpkm.txt", sep = ""),
+                row.names = FALSE, col.names = TRUE, sep = "\t", quote = FALSE)
 
     # box plot
     df_exp_d <- df_exp[apply(df_exp, 1, function(x) { median(x) > 0 }),]
     box_exp <- gather(df_exp_d)
     group_box <- rep(rt_group$group, each = dim(df_exp_d)[1])
     df_box <- data.frame(cbind(box_exp, group_box), stringsAsFactors = FALSE)
-    colnames(df_box) <- c('sample_id', 'expression', 'group')
+    colnames(df_box) <- c("sample_id", "expression", "group")
     df_box$expression <- as.numeric(df_box$expression)
-    write.table(df_box, file = paste(main_dir, '/GeneExpression/all_gene_exp.txt', sep = ''),
-                row.names = FALSE, col.names = TRUE, sep = '\t', quote = FALSE)
+    write.table(df_box, file = paste(main_dir, "/GeneExpression/all_gene_exp.txt", sep = ""),
+                row.names = FALSE, col.names = TRUE, sep = "\t", quote = FALSE)
 
     # hca
-    rt_hclust <- hclust(d = dist(t(df_exp)), method = 'ward.D')
+    rt_hclust <- hclust(d = dist(t(df_exp)), method = "ward.D")
     rt_hclust_dend <- as.dendrogram(rt_hclust)
     new_order <- order.dendrogram(rt_hclust_dend)
 
     # pca
     all_gene_pca <- pre_pca_data(df_exp, rt_group)
-    write.table(all_gene_pca, file = paste(main_dir, '/GeneExpression/all_gene_pca.txt', sep = ''),
-                row.names = FALSE, col.names = TRUE, sep = '\t', quote = FALSE)
+    write.table(all_gene_pca, file = paste(main_dir, "/GeneExpression/all_gene_pca.txt", sep = ""),
+                row.names = FALSE, col.names = TRUE, sep = "\t", quote = FALSE)
 
     # prepare deg analysis data
     rt_mat_list <- limma_deg(df_exp, rt_group)
     rt_sig_fc <- rt_mat_list[[1]]
 
     rt_sig_exp <- rt_mat_list[[2]]
-    write.table(rt_sig_fc, file = paste(main_dir, '/DEGAnalysis/deg_fc.txt', sep = ''),
-                row.names = FALSE, col.names = TRUE, sep = '\t', quote = FALSE)
-    write.table(rt_sig_exp, file = paste(main_dir, '/DEGAnalysis/deg_exp.txt', sep = ''),
-                row.names = FALSE, col.names = TRUE, sep = '\t', quote = FALSE)
+    write.table(rt_sig_fc, file = paste(main_dir, "/DEGAnalysis/deg_fc.txt", sep = ""),
+                row.names = FALSE, col.names = TRUE, sep = "\t", quote = FALSE)
+    write.table(rt_sig_exp, file = paste(main_dir, "/DEGAnalysis/deg_exp.txt", sep = ""),
+                row.names = FALSE, col.names = TRUE, sep = "\t", quote = FALSE)
 
     # deg pca
     rt_pc_deg <- pre_pca_data(rt_sig_exp[, -1], rt_group)
-    write.table(rt_pc_deg, file = paste(main_dir, '/DEGAnalysis/deg_pca.txt', sep = ''),
-                row.names = FALSE, col.names = TRUE, sep = '\t', quote = FALSE)
+    write.table(rt_pc_deg, file = paste(main_dir, "/DEGAnalysis/deg_pca.txt", sep = ""),
+                row.names = FALSE, col.names = TRUE, sep = "\t", quote = FALSE)
 
     # prepare kegg and go analysis data
     rt_sig_fc_com <- merge(rt_sig_fc, gene_covert_table, by = 1)
@@ -221,16 +221,16 @@ if (length(args) < 3) {
   phenotype_file <- args[2]
   result_dir <- args[3]
 
-  if (file_test('-f', exp_table_file) &&
-      file_test('-f', phenotype_file) &&
-      file_test('-d', result_dir)) {
+  if (file_test("-f", exp_table_file) &&
+      file_test("-f", phenotype_file) &&
+      file_test("-d", result_dir)) {
 
     exe_path <- get_exe_path()
     anno_file <- file.path(exe_path, "rnaseq2report", "gene_id_convert_table_rnaseq_latest.txt")
 
-    rt_exp_g <- read.csv(exp_table_file, sep = '\t', header = TRUE, row.names = 1)
-    rt_group <- read.csv(phenotype_file, sep = '\t', header = TRUE)
-    gene_covert_table <- read.csv(anno_file, sep = '\t', header = TRUE)
+    rt_exp_g <- read.csv(exp_table_file, sep = "\t", header = TRUE, row.names = 1)
+    rt_group <- read.csv(phenotype_file, sep = "\t", header = TRUE)
+    gene_covert_table <- read.csv(anno_file, sep = "\t", header = TRUE)
 
     # Prepare directories
     make_directories(result_dir)

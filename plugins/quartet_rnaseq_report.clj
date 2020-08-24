@@ -3,11 +3,41 @@
             [tservice.lib.fs :as fs-lib]
             [clojure.tools.logging :as log]
             [tservice.lib.filter-files :as ff]
-            [merge-exp :as me]
-            [r2r :as r2r]
             [tservice.vendor.multiqc :as mq]
             [tservice.events :as events]
             [clojure.data.json :as json]))
+
+;;; ------------------------------------------------ Event Metadata --------------------------------------------------
+(def metadata
+  {:route ["/ballgown2exp"
+           {:post {:summary "Convert ballgown files to experiment table and generate report."
+                   :parameters {:body specs/ballgown2exp-params-body}
+                   :responses {201 {:body {:download_url string? :log_url string?}}}
+                   :handler (fn [{{{:keys [filepath phenotype]} :body} :parameters}]
+                              (let [workdir (get-workdir)
+                                    from-path (u/replace-path filepath workdir)
+                                    relative-dir (fs-lib/join-paths "download" (u/uuid))
+                                    to-dir (fs-lib/join-paths workdir relative-dir)
+                                    phenotype-filepath (fs-lib/join-paths to-dir "phenotype.txt")
+                                    phenotype-data (cons ["sample_id" "group"]
+                                                         (map vector (:sample_id phenotype) (:group phenotype)))
+                                    log-path (fs-lib/join-paths relative-dir "log")]
+                                (log/info phenotype phenotype-data)
+                                (fs-lib/create-directories! to-dir)
+                                (with-open [file (io/writer phenotype-filepath)]
+                                  (csv/write-csv file phenotype-data :separator \tab))
+                                ; Launch the ballgown2exp
+                                (spit log-path (json/write-str {:status "Running" :msg ""}))
+                                (events/publish-event! :ballgown2exp-convert
+                                                       {:ballgown-dir from-path
+                                                        :phenotype-filepath phenotype-filepath
+                                                        :dest-dir to-dir})
+                                {:status 201
+                                 :body {:download_url (fs-lib/join-paths relative-dir)
+                                        :report (fs-lib/join-paths relative-dir "multiqc.html")
+                                        :log_url log-path}}))}}]
+   :manifest {}
+   :schema {}})
 
 (def ^:const quartet-rnaseq-report-topics
   "The `Set` of event topics which are subscribed to for use in quartet-rnaseq-report tracking."
