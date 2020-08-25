@@ -5,39 +5,94 @@
             [tservice.lib.filter-files :as ff]
             [tservice.vendor.multiqc :as mq]
             [tservice.events :as events]
-            [clojure.data.json :as json]))
+            [clojure.data.json :as json]
+            [merge-exp :as me]
+            [commons :as comm]
+            [exp2qcdt :as exp2qcdt]
+            [tservice.config :refer [get-workdir env]]
+            [tservice.util :as u]
+            [clojure.spec.alpha :as s]
+            [spec-tools.core :as st]))
 
-;;; ------------------------------------------------ Event Metadata --------------------------------------------------
+;;; ------------------------------------------------ Event Specs ------------------------------------------------
+(s/def ::filepath
+  (st/spec
+   {:spec                (s/and string? #(re-matches #"^file:\/\/(\/|\.\/)[a-zA-Z0-9_]+.*" %))
+    :type                :string
+    :description         "File path for covertor."
+    :swagger/default     nil
+    :reason              "The filepath must be string."}))
+
+(s/def ::group
+  (st/spec
+   {:spec                string?
+    :type                :string
+    :description         "A group name which is matched with library."
+    :swagger/default     []
+    :reason              "The group must a string."}))
+
+(s/def ::library
+  (st/spec
+   {:spec                string?
+    :type                :string
+    :description         "A library name."
+    :swagger/default     []
+    :reason              "The library must a string."}))
+
+(s/def ::sample
+  (st/spec
+   {:spec                string?
+    :type                :string
+    :description         "A sample name."
+    :swagger/default     []
+    :reason              "The sample name must a string."}))
+
+(s/def ::metadat-item
+  (s/keys :req-un [::library
+                   ::group
+                   ::sample]))
+
+(s/def ::metadata
+  (s/coll-of ::metadat-item))
+
+(def quartet-rna-report-params-body
+  "A spec for the body parameters."
+  (s/keys :req-un [::filepath ::metadata]))
+
+;;; ------------------------------------------------ Event Metadata ------------------------------------------------
 (def metadata
-  {:route ["/ballgown2exp"
-           {:post {:summary "Convert ballgown files to experiment table and generate report."
-                   :parameters {:body specs/ballgown2exp-params-body}
-                   :responses {201 {:body {:download_url string? :log_url string?}}}
-                   :handler (fn [{{{:keys [filepath phenotype]} :body} :parameters}]
-                              (let [workdir (get-workdir)
-                                    from-path (u/replace-path filepath workdir)
-                                    relative-dir (fs-lib/join-paths "download" (u/uuid))
-                                    to-dir (fs-lib/join-paths workdir relative-dir)
-                                    phenotype-filepath (fs-lib/join-paths to-dir "phenotype.txt")
-                                    phenotype-data (cons ["sample_id" "group"]
-                                                         (map vector (:sample_id phenotype) (:group phenotype)))
-                                    log-path (fs-lib/join-paths relative-dir "log")]
-                                (log/info phenotype phenotype-data)
-                                (fs-lib/create-directories! to-dir)
-                                (with-open [file (io/writer phenotype-filepath)]
-                                  (csv/write-csv file phenotype-data :separator \tab))
-                                ; Launch the ballgown2exp
-                                (spit log-path (json/write-str {:status "Running" :msg ""}))
-                                (events/publish-event! :ballgown2exp-convert
-                                                       {:ballgown-dir from-path
-                                                        :phenotype-filepath phenotype-filepath
-                                                        :dest-dir to-dir})
-                                {:status 201
-                                 :body {:download_url (fs-lib/join-paths relative-dir)
-                                        :report (fs-lib/join-paths relative-dir "multiqc.html")
-                                        :log_url log-path}}))}}]
-   :manifest {}
-   :schema {}})
+  {:route    ["/quartet-rnaseq-report"
+              {:post {:summary "Parse the results of the quartet-rnaseq-qc app and generate the report."
+                      :parameters {:body quartet-rna-report-params-body}
+                      :responses {201 {:body {:download_url string? :log_url string?}}}
+                      :handler (fn [{{{:keys [filepath metadata]} :body} :parameters}]
+                                 (let [workdir (get-workdir)
+                                       from-path (u/replace-path filepath workdir)
+                                       relative-dir (fs-lib/join-paths "download" (u/uuid))
+                                       to-dir (fs-lib/join-paths workdir relative-dir)
+                                       log-path (fs-lib/join-paths to-dir "log")]
+                                   (fs-lib/create-directories! to-dir)
+                                   (spit log-path (json/write-str {:status "Running" :msg ""}))
+                                   (events/publish-event! :quartet_rnaseq_report-convert
+                                                          {:datadir from-path
+                                                           :metadata metadata
+                                                           :dest-dir to-dir})
+                                   {:status 201
+                                    :body {:download_url (fs-lib/join-paths relative-dir)
+                                           :report (fs-lib/join-paths relative-dir "multiqc.html")
+                                           :log_url (fs-lib/join-paths relative-dir "log")}}))}}]
+   :manifest {:description "Parse the results of the quartet-rna-qc app and generate the report."
+              :category "Report"
+              :home "https://github.com/clinico-omics/quartet-rnaseq-report"
+              :name "Quartet RNA-Seq Report"
+              :source "PGx"
+              :short_name "quartet-rnaseq-report"
+              :icons [{:src "", :type "image/png", :sizes "192x192"}
+                      {:src "", :type "image/png", :sizes "192x192"}]
+              :author "shangjun"
+              :hidden false
+              :id "f65d87fd3dd2213d91bb15900ba57c11"
+              :app_name "shangjun/quartet-rnaseq-report"}})
 
 (def ^:const quartet-rnaseq-report-topics
   "The `Set` of event topics which are subscribed to for use in quartet-rnaseq-report tracking."
@@ -50,13 +105,18 @@
 ;;; ------------------------------------------------ Event Processing ------------------------------------------------
 
 (defn- quartet-rnaseq-report!
-  "Chaining Pipeline: merge_exp_file -> r2r -> multiqc."
-  [ballgown-dir phenotype-filepath dest-dir]
-  (let [files (ff/batch-filter-files ballgown-dir [".*call-ballgown/.*.txt"])
+  "Chaining Pipeline: filter-files -> copy-files -> merge_exp_file -> exp2qcdt -> multiqc."
+  [datadir metadata dest-dir]
+  (log/info "Generate quartet rnaseq report: " datadir metadata dest-dir)
+  (let [metadata-file (fs-lib/join-paths dest-dir
+                                         "results"
+                                         "metadata.csv")
+        files (ff/batch-filter-files datadir [".*call-ballgown/.*.txt"])
         ballgown-dir (fs-lib/join-paths dest-dir "ballgown")
         exp-filepath (fs-lib/join-paths dest-dir "fpkm.txt")
         result-dir (fs-lib/join-paths dest-dir "results")
-        log-path (fs-lib/join-paths dest-dir "log")]
+        log-path (fs-lib/join-paths dest-dir "log")
+        config (fs-lib/join-paths (:tservice-plugin-path env) "config/quartet_rnaseq_report.yaml")]
     (try
       (fs-lib/create-directories! ballgown-dir)
       (fs-lib/create-directories! result-dir)
@@ -64,14 +124,12 @@
       (log/info "Merge gene experiment files from ballgown directory to a experiment table: " ballgown-dir exp-filepath)
       (ff/copy-files! files ballgown-dir {:replace-existing true})
       (me/merge-exp-files! (ff/list-files ballgown-dir {:mode "file"}) exp-filepath)
-      (log/info "Call R2R: " exp-filepath phenotype-filepath result-dir)
-      (let [r2r-result (r2r/call-r2r! exp-filepath phenotype-filepath result-dir)
-            multiqc-result (when (= (:status r2r-result) "Success")
-                             (mq/multiqc result-dir dest-dir {:title "RNA-seq Report"}))
-            result (if multiqc-result (assoc r2r-result
-                                             :status (:status multiqc-result)
-                                             :msg (str (:msg r2r-result) "\n" (:msg multiqc-result)))
-                       r2r-result)
+      (comm/write-csv! metadata-file metadata)
+      (let [exp2qcdt-result (exp2qcdt/call-exp2qcdt! exp-filepath metadata-file result-dir)
+            multiqc-result (when (= (:status exp2qcdt-result) "Success")
+                             (mq/multiqc result-dir dest-dir {:config config :template "quartet_rnaseq_report"}))
+            result {:status (:status multiqc-result)
+                    :msg (:msg multiqc-result)}
             log (json/write-str result)]
         (log/info "Status: " result)
         (spit log-path log))
@@ -88,7 +146,7 @@
     (when-let [{topic :topic object :item} quartet-rnaseq-report-event]
       ;; TODO: only if the definition changed??
       (case (events/topic->model topic)
-        "quartet-rnaseq-report"  (quartet-rnaseq-report! (:ballgown-dir object) (:phenotype-filepath object) (:dest-dir object))))
+        "quartet_rnaseq_report"  (quartet-rnaseq-report! (:datadir object) (:metadata object) (:dest-dir object))))
     (catch Throwable e
       (log/warn (format "Failed to process quartet-rnaseq-report event. %s" (:topic quartet-rnaseq-report-event)) e))))
 

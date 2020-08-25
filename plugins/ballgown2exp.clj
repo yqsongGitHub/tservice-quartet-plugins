@@ -4,7 +4,7 @@
             [clojure.tools.logging :as log]
             [tservice.lib.filter-files :as ff]
             [merge-exp :as me]
-            [r2r :as r2r]
+            [rnaseq2report :as r2r]
             [tservice.vendor.multiqc :as mq]
             [tservice.events :as events]
             [clojure.data.json :as json]
@@ -12,13 +12,47 @@
             [tservice.routes.specs :as specs]
             [tservice.util :as u]
             [clojure.data.csv :as csv]
-            [clojure.java.io :as io]))
+            [clojure.java.io :as io]
+            [clojure.spec.alpha :as s]
+            [spec-tools.core :as st]))
+
+;;; ------------------------------------------------ Event Specs ------------------------------------------------
+(s/def ::sample_id
+  (st/spec
+   {:spec                (s/coll-of string?)
+    :type                :vector
+    :description         "list of sample id."
+    :swagger/default     []
+    :reason              "The sample id must a list."}))
+
+(s/def ::group
+  (st/spec
+   {:spec                (s/coll-of string?)
+    :type                :vector
+    :description         "list of group name which is matched with sample id."
+    :swagger/default     []
+    :reason              "The group must a list."}))
+
+(s/def ::filepath
+  (st/spec
+   {:spec                (s/and string? #(re-matches #"^file:\/\/(\/|\.\/)[a-zA-Z0-9_]+.*" %))
+    :type                :string
+    :description         "File path for covertor."
+    :swagger/default     nil
+    :reason              "The filepath must be string."}))
+
+(s/def ::phenotype
+  (s/keys :req-un [::sample_id ::group]))
+
+(def ballgown2exp-params-body
+  "A spec for the body parameters."
+  (s/keys :req-un [::filepath ::phenotype]))
 
 ;;; ------------------------------------------------ Event Metadata -------------------------------------------------
 (def metadata
   {:route ["/ballgown2exp"
            {:post {:summary "Convert ballgown files to experiment table and generate report."
-                   :parameters {:body specs/ballgown2exp-params-body}
+                   :parameters {:body ballgown2exp-params-body}
                    :responses {201 {:body {:download_url string? :log_url string?}}}
                    :handler (fn [{{{:keys [filepath phenotype]} :body} :parameters}]
                               (let [workdir (get-workdir)
@@ -42,7 +76,19 @@
                                 {:status 201
                                  :body {:download_url (fs-lib/join-paths relative-dir)
                                         :report (fs-lib/join-paths relative-dir "multiqc.html")
-                                        :log_url log-path}}))}}]})
+                                        :log_url log-path}}))}}]
+   :manifest {:description "Convert Ballgown Result Files to Expression Table."
+              :category "Convertor"
+              :home "https://github.com/clinico-omics/tservice-plugins"
+              :name "Ballgown to Expression Table"
+              :source "PGx"
+              :short_name "ballgown2exp"
+              :icons [{:src "", :type "image/png", :sizes "192x192"}
+                      {:src "", :type "image/png", :sizes "192x192"}]
+              :author "Jun Shang"
+              :hidden false
+              :id "65cf2c60567fab94b2afdecaaee13adc"
+              :app_name "shangjun/ballgown2exp"}})
 
 (def ^:const ballgown2exp-topics
   "The `Set` of event topics which are subscribed to for use in ballgown2exp tracking."
@@ -55,7 +101,7 @@
 ;;; ------------------------------------------------ Event Processing ------------------------------------------------
 
 (defn- ballgown2exp!
-  "Chaining Pipeline: merge_exp_file -> r2r -> multiqc."
+  "Chaining Pipeline: merge_exp_file -> rnaseq2report -> multiqc."
   [ballgown-dir phenotype-filepath dest-dir]
   (let [files (ff/batch-filter-files ballgown-dir [".*call-ballgown/.*.txt"])
         ballgown-dir (fs-lib/join-paths dest-dir "ballgown")
@@ -70,7 +116,7 @@
       (ff/copy-files! files ballgown-dir {:replace-existing true})
       (me/merge-exp-files! (ff/list-files ballgown-dir {:mode "file"}) exp-filepath)
       (log/info "Call R2R: " exp-filepath phenotype-filepath result-dir)
-      (let [r2r-result (r2r/call-r2r! exp-filepath phenotype-filepath result-dir)
+      (let [r2r-result (r2r/call-rnaseq2report! exp-filepath phenotype-filepath result-dir)
             multiqc-result (when (= (:status r2r-result) "Success")
                              (mq/multiqc result-dir dest-dir {:title "RNA-seq Report"}))
             result (if multiqc-result (assoc r2r-result

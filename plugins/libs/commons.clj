@@ -1,15 +1,22 @@
-(ns merge-exp
-  "Merge expression files."
-  (:require [clojure.data.csv :as csv]
+(ns commons
+  (:require [tservice.config :refer [env]]
+            [clojure.java.shell :as shell :refer [sh]]
+            [clojure.data.csv :as csv]
             [clojure.string :as clj-str]
             [clojure.java.io :as io])
   (:import [org.apache.commons.io.input BOMInputStream]))
 
-(set! *warn-on-reflection* true)
+(defn get-path-variable
+  []
+  (let [external-bin (get-in env [:external-bin])
+        sys-path (System/getenv "PATH")]
+    (if external-bin
+      (str external-bin ":" sys-path)
+      sys-path)))
 
-(defn sort-exp-data
-  [coll]
-  (sort-by :GENE_ID coll))
+(defn exist-bin?
+  [name]
+  (= 0 (:exit (sh "which" name))))
 
 (defn csv-data->maps [csv-data]
   (map zipmap
@@ -44,27 +51,11 @@
        (->> (csv/read-csv reader :separator (guess-separator file))
             csv-data->maps)))))
 
-(defn read-csvs
-  [files]
-  (map #(sort-exp-data (read-csv %)) files))
-
-(defn merge-exp
-  "[[{:GENE_ID 'XXX0' :YYY0 1.2} {:GENE_ID 'XXX1' :YYY1 1.3}]
-    [{:GENE_ID 'XXX0' :YYY2 1.2} {:GENE_ID 'XXX1' :YYY3 1.3}]]"
-  [all-exp-data]
-  (apply map merge all-exp-data))
-
 (defn write-csv!
+  "Write row-data to a csv file, row-data is a vector that each element is a map."
   [path row-data]
   (let [columns (keys (first row-data))
         headers (map name columns)
         rows (mapv #(mapv % columns) row-data)]
     (with-open [file (io/writer path)]
       (csv/write-csv file (cons headers rows) :separator \tab))))
-
-(defn merge-exp-files!
-  "Assumption: all files have the same GENE_ID list, no matter what order."
-  [files path]
-  (->> (read-csvs files)
-       (merge-exp)
-       (write-csv! path)))

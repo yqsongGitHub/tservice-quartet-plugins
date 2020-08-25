@@ -10,12 +10,45 @@
             [tservice.routes.specs :as specs]
             [tservice.util :as u]
             [clojure.string :as str]
-            [clojure.java.io :as io]))
+            [clojure.java.io :as io]
+            [clojure.spec.alpha :as s]
+            [spec-tools.core :as st]))
 
+;;; ------------------------------------------------ Event Specs ------------------------------------------------
+(s/def ::zip_mode
+  (st/spec
+   {:spec                boolean?
+    :type                :boolean
+    :description         "ZIP Mode?"
+    :swagger/default     true
+    :reason              "The zip-mode must be boolean."}))
+
+(s/def ::pdf_mode
+  (st/spec
+   {:spec                boolean?
+    :type                :boolean
+    :description         "PDF Mode?"
+    :swagger/default     true
+    :reason              "The pdf-mode must be boolean."}))
+
+(s/def ::filepath
+  (st/spec
+   {:spec                (s/and string? #(re-matches #"^file:\/\/(\/|\.\/)[a-zA-Z0-9_]+.*" %))
+    :type                :string
+    :description         "File path for covertor."
+    :swagger/default     nil
+    :reason              "The filepath must be string."}))
+
+(def xps2pdf-params-body
+  "A spec for the body parameters."
+  (s/keys :req-un [::filepath]
+          :opt-un [::pdf_mode ::zip_mode]))
+
+;;; ------------------------------------------------ Event Metadata ------------------------------------------------
 (def metadata
   {:route ["/xps2pdf"
            {:post {:summary "Convert xps to pdf."
-                   :parameters {:body specs/xps2pdf-params-body}
+                   :parameters {:body xps2pdf-params-body}
                    :responses {201 {:body {:download_url string? :files [string?] :log_url string?}}}
                    :handler (fn [{{{:keys [filepath]} :body} :parameters}]
                               (let [workdir (get-workdir)
@@ -42,7 +75,19 @@
                                         :files (vec (map #(str/replace % (re-pattern workdir) "") to-files))
                                         :log_url log-path
                                         :zip_url zip-path
-                                        :pdf_url pdf-path}}))}}]})
+                                        :pdf_url pdf-path}}))}}]
+   :manifest {:description "Convert XPS to PDF File."
+              :category "Convertor"
+              :home "https://github.com/clinico-omics/tservice-plugins"
+              :name "XPS to PDF"
+              :source "PGx"
+              :short_name "xps2pdf"
+              :icons [{:src "", :type "image/png", :sizes "192x192"}
+                      {:src "", :type "image/png", :sizes "192x192"}]
+              :author "Jingcheng Yang"
+              :hidden false
+              :id "a4314e073061b74dc16e4c6a9dcd3999"
+              :app_name "yangjingcheng/xps2pdf"}})
 
 (def ^:const xps2pdf-topics
   "The `Set` of event topics which are subscribed to for use in xps2pdf tracking."

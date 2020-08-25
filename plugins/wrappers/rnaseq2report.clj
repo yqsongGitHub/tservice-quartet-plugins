@@ -1,25 +1,13 @@
-(ns r2r
+(ns rnaseq2report
   "A wrapper for rnaseq2report instance."
-  (:require [tservice.config :refer [env]]
+  (:require [commons :refer [get-path-variable]]
             [clojure.java.shell :as shell :refer [sh]]))
 
-(defn get-path-variable
-  []
-  (let [external-bin (get-in env [:external-bin])
-        sys-path (System/getenv "PATH")]
-    (if external-bin
-      (str external-bin ":" sys-path)
-      sys-path)))
-
-(defn exist-bin?
-  [name]
-  (= 0 (:exit (sh "which" name))))
-
-(defn call-r2r!
+(defn call-rnaseq2report!
   "Call rnaseq2report RScript file.
-   exp-table-file: 
+   exp-table-file: An expression table.
    phenotype-file: 
-   result-dir: 
+   result-dir: A directory for result files.
   "
   [exp-table-file phenotype-file result-dir]
   (shell/with-sh-env {:PATH   (get-path-variable)
