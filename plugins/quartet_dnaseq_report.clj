@@ -15,7 +15,7 @@
 ;;; ------------------------------------------------ Event Specs ------------------------------------------------
 (s/def ::filepath
   (st/spec
-   {:spec                (s/and string? #(re-matches #"^file:\/\/(\/|\.\/)[a-zA-Z0-9_]+.*" %))
+   {:spec                (s/and string? #(re-matches #"^[a-zA-Z0-9]+:\/(\/|\.\/)[a-zA-Z0-9_]+.*" %))
     :type                :string
     :description         "File path for covertor."
     :swagger/default     nil
@@ -120,7 +120,7 @@
               :short_name "quartet-dnaseq-report"
               :icons [{:src "", :type "image/png", :sizes "192x192"}
                       {:src "", :type "image/png", :sizes "192x192"}]
-              :author "liuyaqing"
+              :author "Yaqing Liu"
               :hidden false
               :id "0a316a318c3305d950df3920bdb2f2b4"
               :app_name "liuyaqing/quartet-dnaseq-report"}})

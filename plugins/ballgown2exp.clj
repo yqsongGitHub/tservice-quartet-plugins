@@ -35,7 +35,7 @@
 
 (s/def ::filepath
   (st/spec
-   {:spec                (s/and string? #(re-matches #"^file:\/\/(\/|\.\/)[a-zA-Z0-9_]+.*" %))
+   {:spec                (s/and string? #(re-matches #"^[a-zA-Z0-9]+:\/(\/|\.\/)[a-zA-Z0-9_]+.*" %))
     :type                :string
     :description         "File path for covertor."
     :swagger/default     nil
@@ -78,7 +78,7 @@
                                         :report (fs-lib/join-paths relative-dir "multiqc.html")
                                         :log_url log-path}}))}}]
    :manifest {:description "Convert Ballgown Result Files to Expression Table."
-              :category "Convertor"
+              :category "Report"
               :home "https://github.com/clinico-omics/tservice-plugins"
               :name "Ballgown to Expression Table"
               :source "PGx"
