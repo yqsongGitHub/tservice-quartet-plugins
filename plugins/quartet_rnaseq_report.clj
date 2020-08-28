@@ -11,6 +11,7 @@
             [exp2qcdt :as exp2qcdt]
             [tservice.config :refer [get-workdir env]]
             [tservice.util :as u]
+            [spec-tools.json-schema :as json-schema]
             [clojure.spec.alpha :as s]
             [spec-tools.core :as st]))
 
@@ -80,7 +81,12 @@
                                    {:status 201
                                     :body {:download_url (fs-lib/join-paths relative-dir)
                                            :report (fs-lib/join-paths relative-dir "multiqc.html")
-                                           :log_url (fs-lib/join-paths relative-dir "log")}}))}}]
+                                           :log_url (fs-lib/join-paths relative-dir "log")}}))}}
+              {:get {:summary "A json shema for quartet-rnaseq-report."
+                     :parameters {}
+                     :responses {200 {:body map?}}
+                     :handler (fn [_]
+                                (json-schema/transform ::metadata))}}]
    :manifest {:description "Parse the results of the quartet-rna-qc app and generate the report."
               :category "Report"
               :home "https://github.com/clinico-omics/quartet-rnaseq-report"

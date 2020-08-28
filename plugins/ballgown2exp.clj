@@ -9,7 +9,7 @@
             [tservice.events :as events]
             [clojure.data.json :as json]
             [tservice.config :refer [get-workdir]]
-            [tservice.routes.specs :as specs]
+            [spec-tools.json-schema :as json-schema]
             [tservice.util :as u]
             [clojure.data.csv :as csv]
             [clojure.java.io :as io]
@@ -76,7 +76,12 @@
                                 {:status 201
                                  :body {:download_url (fs-lib/join-paths relative-dir)
                                         :report (fs-lib/join-paths relative-dir "multiqc.html")
-                                        :log_url log-path}}))}}]
+                                        :log_url log-path}}))}}
+              {:get {:summary "A json shema for ballgown2exp."
+                     :parameters {}
+                     :responses {200 {:body map?}}
+                     :handler (fn [_]
+                                (json-schema/transform ::phenotype))}}]
    :manifest {:description "Convert Ballgown Result Files to Expression Table."
               :category "Report"
               :home "https://github.com/clinico-omics/tservice-plugins"

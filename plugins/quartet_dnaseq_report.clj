@@ -7,7 +7,7 @@
             [tservice.events :as events]
             [clojure.data.json :as json]
             [tservice.config :refer [get-workdir env]]
-            [tservice.routes.specs :as specs]
+            [spec-tools.json-schema :as json-schema]
             [tservice.util :as u]
             [clojure.spec.alpha :as s]
             [spec-tools.core :as st]))
@@ -95,7 +95,7 @@
   {:route    ["/quartet-dnaseq-report"
               {:post {:summary "Parse the results of the quartet-dnaseq-qc app and generate the report."
                       :parameters {:body quartet-dna-report-params-body}
-                      :responses {201 {:body {:download_url string? :log_url string?}}}
+                      :responses {201 {:body {:download_url string? :log_url string? :report string?}}}
                       :handler (fn [{{{:keys [filepath metadata]} :body} :parameters}]
                                  (let [workdir (get-workdir)
                                        from-path (u/replace-path filepath workdir)
@@ -111,7 +111,12 @@
                                    {:status 201
                                     :body {:download_url (fs-lib/join-paths relative-dir)
                                            :report (fs-lib/join-paths relative-dir "multiqc.html")
-                                           :log_url (fs-lib/join-paths relative-dir "log")}}))}}]
+                                           :log_url (fs-lib/join-paths relative-dir "log")}}))}}
+              {:get {:summary "A json shema for quartet-dnaseq-report."
+                     :parameters {}
+                     :responses {200 {:body map?}}
+                     :handler (fn [_]
+                                (json-schema/transform ::metadata))}}]
    :manifest {:description "Parse the results of the quartet-dna-qc app and generate the report."
               :category "Report"
               :home "https://github.com/clinico-omics/quartet-dnaseq-report"
