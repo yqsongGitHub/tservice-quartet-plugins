@@ -81,8 +81,8 @@
                                    {:status 201
                                     :body {:download_url (fs-lib/join-paths relative-dir)
                                            :report (fs-lib/join-paths relative-dir "multiqc.html")
-                                           :log_url (fs-lib/join-paths relative-dir "log")}}))}}
-              {:get {:summary "A json shema for quartet-rnaseq-report."
+                                           :log_url (fs-lib/join-paths relative-dir "log")}}))}
+               :get {:summary "A json shema for quartet-rnaseq-report."
                      :parameters {}
                      :responses {200 {:body map?}}
                      :handler (fn [_]

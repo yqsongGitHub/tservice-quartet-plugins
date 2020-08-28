@@ -76,8 +76,8 @@
                                 {:status 201
                                  :body {:download_url (fs-lib/join-paths relative-dir)
                                         :report (fs-lib/join-paths relative-dir "multiqc.html")
-                                        :log_url log-path}}))}}
-           {:get {:summary "A json shema for ballgown2exp."
+                                        :log_url log-path}}))}
+            :get {:summary "A json shema for ballgown2exp."
                   :parameters {}
                   :responses {200 {:body map?}}
                   :handler (fn [_]
