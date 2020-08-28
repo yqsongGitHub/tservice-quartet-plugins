@@ -116,7 +116,8 @@
                      :parameters {}
                      :responses {200 {:body map?}}
                      :handler (fn [_]
-                                (json-schema/transform ::metadata))}}]
+                                {:status 200
+                                 :body (json-schema/transform ::metadata)})}}]
    :manifest {:description "Parse the results of the quartet-dna-qc app and generate the report."
               :category "Report"
               :home "https://github.com/clinico-omics/quartet-dnaseq-report"
