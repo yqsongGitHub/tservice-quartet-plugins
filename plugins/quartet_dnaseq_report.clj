@@ -95,11 +95,12 @@
   {:route    ["/quartet-dnaseq-report"
               {:post {:summary "Parse the results of the quartet-dnaseq-qc app and generate the report."
                       :parameters {:body quartet-dna-report-params-body}
-                      :responses {201 {:body {:download_url string? :log_url string? :report string?}}}
+                      :responses {201 {:body {:download_url string? :log_url string? :report string? :id string?}}}
                       :handler (fn [{{{:keys [filepath metadata]} :body} :parameters}]
                                  (let [workdir (get-workdir)
                                        from-path (u/replace-path filepath workdir)
-                                       relative-dir (fs-lib/join-paths "download" (u/uuid))
+                                       uuid (u/uuid)
+                                       relative-dir (fs-lib/join-paths "download" uuid)
                                        to-dir (fs-lib/join-paths workdir relative-dir)
                                        log-path (fs-lib/join-paths to-dir "log")]
                                    (fs-lib/create-directories! to-dir)
@@ -111,7 +112,8 @@
                                    {:status 201
                                     :body {:download_url (fs-lib/join-paths relative-dir)
                                            :report (fs-lib/join-paths relative-dir "multiqc.html")
-                                           :log_url (fs-lib/join-paths relative-dir "log")}}))}
+                                           :log_url (fs-lib/join-paths relative-dir "log")
+                                           :id uuid}}))}
                :get {:summary "A json shema for quartet-dnaseq-report."
                      :parameters {}
                      :responses {200 {:body map?}}

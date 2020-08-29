@@ -41,48 +41,50 @@
     :swagger/default     nil
     :reason              "The filepath must be string."}))
 
-(s/def ::phenotype
+(s/def ::metadata
   (s/keys :req-un [::sample_id ::group]))
 
 (def ballgown2exp-params-body
   "A spec for the body parameters."
-  (s/keys :req-un [::filepath ::phenotype]))
+  (s/keys :req-un [::filepath ::metadata]))
 
 ;;; ------------------------------------------------ Event Metadata -------------------------------------------------
 (def metadata
   {:route ["/ballgown2exp"
            {:post {:summary "Convert ballgown files to experiment table and generate report."
                    :parameters {:body ballgown2exp-params-body}
-                   :responses {201 {:body {:download_url string? :log_url string?}}}
-                   :handler (fn [{{{:keys [filepath phenotype]} :body} :parameters}]
+                   :responses {201 {:body {:download_url string? :log_url string? :report string? :id string?}}}
+                   :handler (fn [{{{:keys [filepath metadata]} :body} :parameters}]
                               (let [workdir (get-workdir)
                                     from-path (u/replace-path filepath workdir)
-                                    relative-dir (fs-lib/join-paths "download" (u/uuid))
+                                    uuid (u/uuid)
+                                    relative-dir (fs-lib/join-paths "download" uuid)
                                     to-dir (fs-lib/join-paths workdir relative-dir)
-                                    phenotype-filepath (fs-lib/join-paths to-dir "phenotype.txt")
-                                    phenotype-data (cons ["sample_id" "group"]
-                                                         (map vector (:sample_id phenotype) (:group phenotype)))
+                                    metadata-filepath (fs-lib/join-paths to-dir "phenotype.txt")
+                                    metadata-data (cons ["sample_id" "group"]
+                                                        (map vector (:sample_id metadata) (:group metadata)))
                                     log-path (fs-lib/join-paths relative-dir "log")]
-                                (log/info phenotype phenotype-data)
+                                (log/info metadata metadata-data)
                                 (fs-lib/create-directories! to-dir)
-                                (with-open [file (io/writer phenotype-filepath)]
-                                  (csv/write-csv file phenotype-data :separator \tab))
+                                (with-open [file (io/writer metadata-filepath)]
+                                  (csv/write-csv file metadata-data :separator \tab))
                                 ; Launch the ballgown2exp
                                 (spit log-path (json/write-str {:status "Running" :msg ""}))
                                 (events/publish-event! :ballgown2exp-convert
                                                        {:ballgown-dir from-path
-                                                        :phenotype-filepath phenotype-filepath
+                                                        :metadata-filepath metadata-filepath
                                                         :dest-dir to-dir})
                                 {:status 201
                                  :body {:download_url (fs-lib/join-paths relative-dir)
                                         :report (fs-lib/join-paths relative-dir "multiqc.html")
-                                        :log_url log-path}}))}
+                                        :log_url log-path
+                                        :id uuid}}))}
             :get {:summary "A json shema for ballgown2exp."
                   :parameters {}
                   :responses {200 {:body map?}}
                   :handler (fn [_]
                              {:status 200
-                              :body (json-schema/transform ::phenotype)})}}]
+                              :body (json-schema/transform ::metadata)})}}]
    :manifest {:description "Convert Ballgown Result Files to Expression Table."
               :category "Report"
               :home "https://github.com/clinico-omics/tservice-plugins"
@@ -108,7 +110,7 @@
 
 (defn- ballgown2exp!
   "Chaining Pipeline: merge_exp_file -> rnaseq2report -> multiqc."
-  [ballgown-dir phenotype-filepath dest-dir]
+  [ballgown-dir metadata-filepath dest-dir]
   (let [files (ff/batch-filter-files ballgown-dir [".*call-ballgown/.*.txt"])
         ballgown-dir (fs-lib/join-paths dest-dir "ballgown")
         exp-filepath (fs-lib/join-paths dest-dir "fpkm.txt")
@@ -121,8 +123,8 @@
       (log/info "Merge gene experiment files from ballgown directory to a experiment table: " ballgown-dir exp-filepath)
       (ff/copy-files! files ballgown-dir {:replace-existing true})
       (me/merge-exp-files! (ff/list-files ballgown-dir {:mode "file"}) exp-filepath)
-      (log/info "Call R2R: " exp-filepath phenotype-filepath result-dir)
-      (let [r2r-result (r2r/call-rnaseq2report! exp-filepath phenotype-filepath result-dir)
+      (log/info "Call R2R: " exp-filepath metadata-filepath result-dir)
+      (let [r2r-result (r2r/call-rnaseq2report! exp-filepath metadata-filepath result-dir)
             multiqc-result (when (= (:status r2r-result) "Success")
                              (mq/multiqc result-dir dest-dir {:title "RNA-seq Report"}))
             result (if multiqc-result (assoc r2r-result
@@ -145,7 +147,7 @@
     (when-let [{topic :topic object :item} ballgown2exp-event]
       ;; TODO: only if the definition changed??
       (case (events/topic->model topic)
-        "ballgown2exp"  (ballgown2exp! (:ballgown-dir object) (:phenotype-filepath object) (:dest-dir object))))
+        "ballgown2exp"  (ballgown2exp! (:ballgown-dir object) (:metadata-filepath object) (:dest-dir object))))
     (catch Throwable e
       (log/warn (format "Failed to process ballgown2exp event. %s" (:topic ballgown2exp-event)) e))))
 
