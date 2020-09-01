@@ -155,7 +155,7 @@
                      :responses {200 {:body map?}}
                      :handler (fn [_]
                                 {:status 200
-                                 :body (json-schema/transform ::quartet-rna-report-params-body)})}}]
+                                 :body (json-schema/transform quartet-rna-report-params-body)})}}]
    :manifest {:description "Parse the results of the quartet-rna-qc app and generate the report."
               :category "Report"
               :home "https://github.com/clinico-omics/quartet-rnaseq-report"

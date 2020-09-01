@@ -87,7 +87,7 @@
                   :responses {200 {:body map?}}
                   :handler (fn [_]
                              {:status 200
-                              :body (json-schema/transform ::ballgown2exp-params-body)})}}]
+                              :body (json-schema/transform ballgown2exp-params-body)})}}]
    :manifest {:description "Convert Ballgown Result Files to Expression Table."
               :category "Report"
               :home "https://github.com/clinico-omics/tservice-plugins"
