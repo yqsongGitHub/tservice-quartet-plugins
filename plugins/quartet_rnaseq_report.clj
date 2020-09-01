@@ -56,9 +56,74 @@
 (s/def ::metadata
   (s/coll-of ::metadat-item))
 
+(s/def ::lab
+  (st/spec
+   {:spec                string?
+    :type                :string
+    :description         "Lab name."
+    :swagger/default     []
+    :reason              "The lab_name must be string."}))
+
+(s/def ::sequencing_platform
+  (st/spec
+   {:spec                string?
+    :type                :string
+    :description         "Sequencing Platform."
+    :swagger/default     []
+    :reason              "The sequencing_platform must be string."}))
+
+(s/def ::sequencing_method
+  (st/spec
+   {:spec                string?
+    :type                :string
+    :description         "Sequencing Method"
+    :swagger/default     []
+    :reason              "The sequencing_method must be string."}))
+
+(s/def ::library_protocol
+  (st/spec
+   {:spec                string?
+    :type                :string
+    :description         "Library protocol."
+    :swagger/default     []
+    :reason              "The library_protocol must be string."}))
+
+(s/def ::library_kit
+  (st/spec
+   {:spec                string?
+    :type                :string
+    :description         "Library kit."
+    :swagger/default     []
+    :reason              "The library_kit must be string."}))
+
+(s/def ::read_length
+  (st/spec
+   {:spec                string?
+    :type                :string
+    :description         "Read length"
+    :swagger/default     []
+    :reason              "The read_length must be string."}))
+
+(s/def ::date
+  (st/spec
+   {:spec                string?
+    :type                :string
+    :description         "Date"
+    :swagger/default     []
+    :reason              "The date must be string."}))
+
+(s/def ::parameters
+  (s/keys :req-un [::lab
+                   ::sequencing_platform
+                   ::sequencing_method
+                   ::library_protocol
+                   ::library_kit
+                   ::read_length
+                   ::date]))
+
 (def quartet-rna-report-params-body
   "A spec for the body parameters."
-  (s/keys :req-un [::filepath ::metadata]))
+  (s/keys :req-un [::filepath ::metadata ::parameters]))
 
 ;;; ------------------------------------------------ Event Metadata ------------------------------------------------
 (def metadata
@@ -66,7 +131,7 @@
               {:post {:summary "Parse the results of the quartet-rnaseq-qc app and generate the report."
                       :parameters {:body quartet-rna-report-params-body}
                       :responses {201 {:body {:download_url string? :log_url string? :report string? :id string?}}}
-                      :handler (fn [{{{:keys [filepath metadata]} :body} :parameters}]
+                      :handler (fn [{{{:keys [filepath metadata parameters]} :body} :parameters}]
                                  (let [workdir (get-workdir)
                                        from-path (u/replace-path filepath workdir)
                                        uuid (u/uuid)
@@ -77,10 +142,11 @@
                                    (spit log-path (json/write-str {:status "Running" :msg ""}))
                                    (events/publish-event! :quartet_rnaseq_report-convert
                                                           {:datadir from-path
+                                                           :parameters parameters
                                                            :metadata metadata
                                                            :dest-dir to-dir})
                                    {:status 201
-                                    :body {:download_url (fs-lib/join-paths relative-dir)
+                                    :body {:results (fs-lib/join-paths relative-dir)
                                            :report (fs-lib/join-paths relative-dir "multiqc.html")
                                            :log_url (fs-lib/join-paths relative-dir "log")
                                            :id uuid}}))}
@@ -89,7 +155,7 @@
                      :responses {200 {:body map?}}
                      :handler (fn [_]
                                 {:status 200
-                                 :body (json-schema/transform ::metadata)})}}]
+                                 :body (json-schema/transform ::quartet-rna-report-params-body)})}}]
    :manifest {:description "Parse the results of the quartet-rna-qc app and generate the report."
               :category "Report"
               :home "https://github.com/clinico-omics/quartet-rnaseq-report"
@@ -115,11 +181,14 @@
 
 (defn- quartet-rnaseq-report!
   "Chaining Pipeline: filter-files -> copy-files -> merge_exp_file -> exp2qcdt -> multiqc."
-  [datadir metadata dest-dir]
-  (log/info "Generate quartet rnaseq report: " datadir metadata dest-dir)
+  [datadir parameters metadata dest-dir]
+  (log/info "Generate quartet rnaseq report: " datadir parameters metadata dest-dir)
   (let [metadata-file (fs-lib/join-paths dest-dir
                                          "results"
                                          "metadata.csv")
+        parameters-file (fs-lib/join-paths dest-dir
+                                           "results"
+                                           "general-info.json")
         files (ff/batch-filter-files datadir [".*call-ballgown/.*.txt"])
         ballgown-dir (fs-lib/join-paths dest-dir "ballgown")
         exp-filepath (fs-lib/join-paths dest-dir "fpkm.txt")
@@ -133,6 +202,7 @@
       (log/info "Merge gene experiment files from ballgown directory to a experiment table: " ballgown-dir exp-filepath)
       (ff/copy-files! files ballgown-dir {:replace-existing true})
       (me/merge-exp-files! (ff/list-files ballgown-dir {:mode "file"}) exp-filepath)
+      (spit parameters-file (json/write-str parameters))
       (comm/write-csv! metadata-file metadata)
       (let [exp2qcdt-result (exp2qcdt/call-exp2qcdt! exp-filepath metadata-file result-dir)
             multiqc-result (when (= (:status exp2qcdt-result) "Success")
@@ -155,7 +225,7 @@
     (when-let [{topic :topic object :item} quartet-rnaseq-report-event]
       ;; TODO: only if the definition changed??
       (case (events/topic->model topic)
-        "quartet_rnaseq_report"  (quartet-rnaseq-report! (:datadir object) (:metadata object) (:dest-dir object))))
+        "quartet_rnaseq_report" (quartet-rnaseq-report! (:datadir object) (:parameters object) (:metadata object) (:dest-dir object))))
     (catch Throwable e
       (log/warn (format "Failed to process quartet-rnaseq-report event. %s" (:topic quartet-rnaseq-report-event)) e))))
 

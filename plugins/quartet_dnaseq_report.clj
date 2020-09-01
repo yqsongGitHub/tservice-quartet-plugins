@@ -77,7 +77,7 @@
     :swagger/default     []
     :reason              "The date must be string."}))
 
-(s/def ::metadata
+(s/def ::parameters
   (s/keys :req-un [::lab
                    ::sequencing_platform
                    ::sequencing_method
@@ -86,9 +86,12 @@
                    ::read_length
                    ::date]))
 
+(s/def ::metadata
+  (s/keys :req-un []))
+
 (def quartet-dna-report-params-body
   "A spec for the body parameters."
-  (s/keys :req-un [::filepath ::metadata]))
+  (s/keys :req-un [::filepath ::parameters ::metadata]))
 
 ;;; ------------------------------------------------ Event Metadata ------------------------------------------------
 (def metadata
@@ -96,7 +99,7 @@
               {:post {:summary "Parse the results of the quartet-dnaseq-qc app and generate the report."
                       :parameters {:body quartet-dna-report-params-body}
                       :responses {201 {:body {:download_url string? :log_url string? :report string? :id string?}}}
-                      :handler (fn [{{{:keys [filepath metadata]} :body} :parameters}]
+                      :handler (fn [{{{:keys [filepath parameters metadata]} :body} :parameters}]
                                  (let [workdir (get-workdir)
                                        from-path (u/replace-path filepath workdir)
                                        uuid (u/uuid)
@@ -108,9 +111,10 @@
                                    (events/publish-event! :quartet_dnaseq_report-convert
                                                           {:datadir from-path
                                                            :metadata metadata
+                                                           :parameters parameters
                                                            :dest-dir to-dir})
                                    {:status 201
-                                    :body {:download_url (fs-lib/join-paths relative-dir)
+                                    :body {:results (fs-lib/join-paths relative-dir)
                                            :report (fs-lib/join-paths relative-dir "multiqc.html")
                                            :log_url (fs-lib/join-paths relative-dir "log")
                                            :id uuid}}))}
@@ -119,7 +123,7 @@
                      :responses {200 {:body map?}}
                      :handler (fn [_]
                                 {:status 200
-                                 :body (json-schema/transform ::metadata)})}}]
+                                 :body (json-schema/transform ::quartet-dna-report-params-body)})}}]
    :manifest {:description "Parse the results of the quartet-dna-qc app and generate the report."
               :category "Report"
               :home "https://github.com/clinico-omics/quartet-dnaseq-report"
@@ -145,9 +149,9 @@
 
 (defn- quartet-dnaseq-report!
   "Chaining Pipeline: filter-files -> copy-files -> multiqc."
-  [datadir metadata dest-dir]
-  (log/info "Generate quartet dna report: " datadir metadata dest-dir)
-  (let [metadata-file (fs-lib/join-paths dest-dir
+  [datadir parameters metadata dest-dir]
+  (log/info "Generate quartet dna report: " datadir parameters metadata dest-dir)
+  (let [parameters-file (fs-lib/join-paths dest-dir
                                          "results"
                                          "data_generation_information.json")
         files (ff/batch-filter-files datadir
@@ -167,7 +171,7 @@
         config (fs-lib/join-paths (:tservice-plugin-path env) "config/quartet_dnaseq_report.yaml")]
     (try
       (fs-lib/create-directories! result-dir)
-      (spit metadata-file (json/write-str metadata))
+      (spit parameters-file (json/write-str parameters))
       (log/info "Copy files to " result-dir)
       (ff/copy-files! files result-dir {:replace-existing true})
       (let [multiqc-result (mq/multiqc result-dir dest-dir {:config config :template "quartet_dnaseq_report"})
@@ -189,7 +193,7 @@
     (when-let [{topic :topic object :item} quartet-dnaseq-report-event]
       ;; TODO: only if the definition changed??
       (case (events/topic->model topic)
-        "quartet_dnaseq_report"  (quartet-dnaseq-report! (:datadir object) (:metadata object) (:dest-dir object))))
+        "quartet_dnaseq_report"  (quartet-dnaseq-report! (:datadir object) (:parameters object) (:metadata object) (:dest-dir object))))
     (catch Throwable e
       (log/warn (format "Failed to process quartet-dnaseq-report event. %s" (:topic quartet-dnaseq-report-event)) e))))
 

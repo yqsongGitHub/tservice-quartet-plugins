@@ -5,6 +5,18 @@
 - quartet-rnaseq-report
 - xps2pdf
 
+## API Sepcification
+### Request
+- filepath
+- parameters
+- metadata
+
+### Response
+- results
+- log
+- report
+- id
+
 ## Contributors
 - [Jingcheng Yang](https://github.com/yjcyxky)
 - [Jun Shang](https://github.com/stead99)

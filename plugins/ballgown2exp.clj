@@ -44,9 +44,12 @@
 (s/def ::metadata
   (s/keys :req-un [::sample_id ::group]))
 
+(s/def ::parameters
+  (s/keys :req-un []))
+
 (def ballgown2exp-params-body
   "A spec for the body parameters."
-  (s/keys :req-un [::filepath ::metadata]))
+  (s/keys :req-un [::filepath ::metadata ::parameters]))
 
 ;;; ------------------------------------------------ Event Metadata -------------------------------------------------
 (def metadata
@@ -75,7 +78,7 @@
                                                         :metadata-filepath metadata-filepath
                                                         :dest-dir to-dir})
                                 {:status 201
-                                 :body {:download_url (fs-lib/join-paths relative-dir)
+                                 :body {:results (fs-lib/join-paths relative-dir)
                                         :report (fs-lib/join-paths relative-dir "multiqc.html")
                                         :log_url log-path
                                         :id uuid}}))}
@@ -84,7 +87,7 @@
                   :responses {200 {:body map?}}
                   :handler (fn [_]
                              {:status 200
-                              :body (json-schema/transform ::metadata)})}}]
+                              :body (json-schema/transform ::ballgown2exp-params-body)})}}]
    :manifest {:description "Convert Ballgown Result Files to Expression Table."
               :category "Report"
               :home "https://github.com/clinico-omics/tservice-plugins"
