@@ -11,8 +11,7 @@
             [tservice.config :refer [get-workdir]]
             [spec-tools.json-schema :as json-schema]
             [tservice.util :as u]
-            [clojure.data.csv :as csv]
-            [clojure.java.io :as io]
+            [commons :as comm]
             [clojure.spec.alpha :as s]
             [spec-tools.core :as st]))
 
@@ -41,8 +40,11 @@
     :swagger/default     nil
     :reason              "The filepath must be string."}))
 
-(s/def ::metadata
+(s/def ::metadat-item
   (s/keys :req-un [::sample_id ::group]))
+
+(s/def ::metadata
+  (s/coll-of ::metadat-item))
 
 (s/def ::parameters
   (s/keys :req-un []))
@@ -57,25 +59,20 @@
            {:post {:summary "Convert ballgown files to experiment table and generate report."
                    :parameters {:body ballgown2exp-params-body}
                    :responses {201 {:body {:download_url string? :log_url string? :report string? :id string?}}}
-                   :handler (fn [{{{:keys [filepath metadata]} :body} :parameters}]
+                   :handler (fn [{{{:keys [filepath parameters metadata]} :body} :parameters}]
                               (let [workdir (get-workdir)
                                     from-path (u/replace-path filepath workdir)
                                     uuid (u/uuid)
                                     relative-dir (fs-lib/join-paths "download" uuid)
                                     to-dir (fs-lib/join-paths workdir relative-dir)
-                                    metadata-filepath (fs-lib/join-paths to-dir "phenotype.txt")
-                                    metadata-data (cons ["sample_id" "group"]
-                                                        (map vector (:sample_id metadata) (:group metadata)))
                                     log-path (fs-lib/join-paths relative-dir "log")]
-                                (log/info metadata metadata-data)
                                 (fs-lib/create-directories! to-dir)
-                                (with-open [file (io/writer metadata-filepath)]
-                                  (csv/write-csv file metadata-data :separator \tab))
                                 ; Launch the ballgown2exp
                                 (spit log-path (json/write-str {:status "Running" :msg ""}))
                                 (events/publish-event! :ballgown2exp-convert
-                                                       {:ballgown-dir from-path
-                                                        :metadata-filepath metadata-filepath
+                                                       {:data-dir from-path
+                                                        :metadata metadata
+                                                        :parameters parameters
                                                         :dest-dir to-dir})
                                 {:status 201
                                  :body {:results (fs-lib/join-paths relative-dir)
@@ -113,12 +110,15 @@
 
 (defn- ballgown2exp!
   "Chaining Pipeline: merge_exp_file -> rnaseq2report -> multiqc."
-  [ballgown-dir metadata-filepath dest-dir]
-  (let [files (ff/batch-filter-files ballgown-dir [".*call-ballgown/.*.txt"])
+  [data-dir parameters metadata dest-dir]
+  (let [files (ff/batch-filter-files data-dir [".*call-ballgown/.*.txt"])
         ballgown-dir (fs-lib/join-paths dest-dir "ballgown")
         exp-filepath (fs-lib/join-paths dest-dir "fpkm.txt")
         result-dir (fs-lib/join-paths dest-dir "results")
-        log-path (fs-lib/join-paths dest-dir "log")]
+        log-path (fs-lib/join-paths dest-dir "log")
+        metadata-file (fs-lib/join-paths dest-dir
+                                         "results"
+                                         "phenotype.csv")]
     (try
       (fs-lib/create-directories! ballgown-dir)
       (fs-lib/create-directories! result-dir)
@@ -126,8 +126,9 @@
       (log/info "Merge gene experiment files from ballgown directory to a experiment table: " ballgown-dir exp-filepath)
       (ff/copy-files! files ballgown-dir {:replace-existing true})
       (me/merge-exp-files! (ff/list-files ballgown-dir {:mode "file"}) exp-filepath)
-      (log/info "Call R2R: " exp-filepath metadata-filepath result-dir)
-      (let [r2r-result (r2r/call-rnaseq2report! exp-filepath metadata-filepath result-dir)
+      (log/info "Call R2R: " exp-filepath metadata result-dir)
+      (comm/write-csv! metadata-file metadata)
+      (let [r2r-result (r2r/call-rnaseq2report! exp-filepath metadata-file result-dir)
             multiqc-result (when (= (:status r2r-result) "Success")
                              (mq/multiqc result-dir dest-dir {:title "RNA-seq Report"}))
             result (if multiqc-result (assoc r2r-result
@@ -150,7 +151,7 @@
     (when-let [{topic :topic object :item} ballgown2exp-event]
       ;; TODO: only if the definition changed??
       (case (events/topic->model topic)
-        "ballgown2exp"  (ballgown2exp! (:ballgown-dir object) (:metadata-filepath object) (:dest-dir object))))
+        "ballgown2exp"  (ballgown2exp! (:data-dir object) (:parameters object) (:metadata object) (:dest-dir object))))
     (catch Throwable e
       (log/warn (format "Failed to process ballgown2exp event. %s" (:topic ballgown2exp-event)) e))))
 
