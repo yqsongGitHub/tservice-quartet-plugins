@@ -130,7 +130,7 @@
   {:route    ["/quartet-rnaseq-report"
               {:post {:summary "Parse the results of the quartet-rnaseq-qc app and generate the report."
                       :parameters {:body quartet-rna-report-params-body}
-                      :responses {201 {:body {:download_url string? :log_url string? :report string? :id string?}}}
+                      :responses {201 {:body {:results string? :log string? :report string? :id string?}}}
                       :handler (fn [{{{:keys [filepath metadata parameters]} :body} :parameters}]
                                  (let [workdir (get-workdir)
                                        from-path (u/replace-path filepath workdir)
@@ -148,7 +148,7 @@
                                    {:status 201
                                     :body {:results (fs-lib/join-paths relative-dir)
                                            :report (fs-lib/join-paths relative-dir "multiqc.html")
-                                           :log_url (fs-lib/join-paths relative-dir "log")
+                                           :log (fs-lib/join-paths relative-dir "log")
                                            :id uuid}}))}
                :get {:summary "A json shema for quartet-rnaseq-report."
                      :parameters {}

@@ -18,19 +18,19 @@
 ;;; ------------------------------------------------ Event Specs ------------------------------------------------
 (s/def ::sample_id
   (st/spec
-   {:spec                (s/coll-of string?)
-    :type                :vector
-    :description         "list of sample id."
+   {:spec                string?
+    :type                :string
+    :description         "Cample id."
     :swagger/default     []
-    :reason              "The sample id must a list."}))
+    :reason              "The sample id must a string."}))
 
 (s/def ::group
   (st/spec
-   {:spec                (s/coll-of string?)
-    :type                :vector
-    :description         "list of group name which is matched with sample id."
+   {:spec                string?
+    :type                :string
+    :description         "The group name which is matched with sample id."
     :swagger/default     []
-    :reason              "The group must a list."}))
+    :reason              "The group must a string."}))
 
 (s/def ::filepath
   (st/spec
@@ -58,7 +58,7 @@
   {:route ["/ballgown2exp"
            {:post {:summary "Convert ballgown files to experiment table and generate report."
                    :parameters {:body ballgown2exp-params-body}
-                   :responses {201 {:body {:download_url string? :log_url string? :report string? :id string?}}}
+                   :responses {201 {:body {:results string? :log string? :report string? :id string?}}}
                    :handler (fn [{{{:keys [filepath parameters metadata]} :body} :parameters}]
                               (let [workdir (get-workdir)
                                     from-path (u/replace-path filepath workdir)
@@ -77,7 +77,7 @@
                                 {:status 201
                                  :body {:results (fs-lib/join-paths relative-dir)
                                         :report (fs-lib/join-paths relative-dir "multiqc.html")
-                                        :log_url log-path
+                                        :log log-path
                                         :id uuid}}))}
             :get {:summary "A json shema for ballgown2exp."
                   :parameters {}
