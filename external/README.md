@@ -33,17 +33,11 @@ It is a destination directory.
 rnaseq2report.R log2fpkm.txt phenotye.txt ./
 ```
 
-## [EXP2QCDT](./exp2qcdt.sh)
+## [EXP2QCDT](https://github.com/clinico-omics/exp2qcdt)
 
-Convert expression table to qc data table.
+### Arguments
 
-### Installation
-
-```R
-devtools.install_github("clinico-omics/exp2qcdt")
-```
-
-### Usage
+### Command Example
 
 How to call exp2qcdt from terminal?
 
@@ -55,29 +49,4 @@ OR
 
 ```clojure
 
-```
-
-## XPS Convertor
-
-Plugin xps2pdf is depend on libgxps tools, so need to install libgxps tools before using xps2pdf plugin.
-
-### Installation
-
-> For Mac, `brew install libgxps`, more details in https://formulae.brew.sh/formula/libgxps
-> For Linux, `yum install libgxps-tools`
-
-### Usage
-
-```bash
-# Not need another bash wrapper
-```
-
-OR
-
-```clojure
-(require '[xps :refer [command]])
-
-(command from to "pdf")
-; or
-(xps2pdf from to)
 ```
