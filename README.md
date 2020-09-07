@@ -1,4 +1,15 @@
-# Plugins for Tservice
+<h1 align="center">Plugins for Tservice</h1>
+<div align="center">
+Tservice is a tool service for reporting, statistics, converting or such tasks that are running less than 10 minutes and more than 1 minutes. 
+
+The repo is hosting all plugins for tservice.
+</div>
+
+<div align="center">
+
+[![License](https://img.shields.io/npm/l/package.json.svg?style=flat)](./LICENSE)
+
+</div>
 
 ## Table of contents
 
