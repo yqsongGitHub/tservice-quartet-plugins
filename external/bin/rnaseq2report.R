@@ -208,7 +208,7 @@ get_exe_path <- function() {
   initial.options <- commandArgs(trailingOnly = FALSE)
   file.arg.name <- "--file="
   script.name <- sub(file.arg.name, "", initial.options[grep(file.arg.name, initial.options)])
-  script.dirname <- dirname(script.name)
+  script.dirname <- paste0(dirname(dirname(script.name)), "/data", sep="")
   return(script.dirname)
 }
 

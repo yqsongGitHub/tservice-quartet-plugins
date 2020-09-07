@@ -1,4 +1,44 @@
-# Tservice Plugins
+# Tservice Plugins (Reproducible Way)
+## Installation
+### R Packages
+- Connect tservice container
+
+```
+docker exec -it XXX bash
+```
+
+- Change directory to /plugins
+
+```
+cd /plugins
+```
+
+- Activate renv and restore all installed packages
+
+```
+renv::restore()
+```
+
+### Python Packages
+- Connect tservice container
+
+```
+docker exec -it XXX bash
+```
+
+- Change directory to /plugins
+
+```
+cd /plugins
+```
+
+- Activate renv and restore all installed packages
+
+```
+poetry install
+```
+
+# Tservice Plugins (Obsolete)
 ## Installation
 - Install Conda and set channels (.condarc)
 
