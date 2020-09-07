@@ -1,5 +1,36 @@
 # Tservice Plugins (Reproducible Way)
-## Installation
+## Architecture of Tservice Plugin System
+
+```
+Executable entrypoint file --->|
+Tservice Common Library    --->| --> wrapper --> plugin --> Tservice Loader --> Tservice API
+Plugin Library file        --->|  
+
+├── external                        # All external program, such as python/R/bash/rust program.
+│   ├── README.md
+│   ├── bin                         # Executable entrypoint files which are related with plugins.
+│   └── data                        # Dependent data files for executable entrypoint files
+├── plugins                         # Definition file for plugin
+│   ├── config                      # Config file for wrapper/plugin.
+│   ├── docs                        # Documentation file for plugin.
+│   ├── libs                        # Library for plugin or wrapper.
+│   ├── wrappers                    # A wrapper for executable entrypoint file
+│   ├── quartet_dnaseq_report.clj
+│   ├── quartet_rnaseq_report.clj
+│   ├── ballgown2exp.clj
+│   └── xps2pdf.clj
+├── poetry.lock                     # Dependencies for python program by poetry
+├── pyproject.toml                  # Config file for poetry
+├── renv                            # Dependencies for R program by renv
+│   ├── .gitignore
+│   ├── activate.R
+│   ├── library
+│   ├── settings.dcf
+│   └── staging
+└── renv.lock
+```
+
+## How to install plugins for tservice
 ### R Packages
 - Connect tservice container
 
