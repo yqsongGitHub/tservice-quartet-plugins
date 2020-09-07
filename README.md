@@ -1,10 +1,24 @@
-# Tservice Plugins (Reproducible Way)
-## Architecture of Tservice Plugin System
+# Plugins for Tservice
+
+## Table of contents
+
+- [Tservice Plugins (RECOMMENDATION)](#tservice-plugins-recommendation)
+  - [Architecture of Tservice Plugin System](#architecture-of-tservice-plugin-system)
+  - [How to install plugins for tservice](#how-to-install-plugins-for-tservice)
+    - [R Packages](#r-packages)
+    - [Python Packages](#python-packages)
+- [Tservice Plugins (NOT RECOMMENDATION)](#tservice-plugins-not-recommendation)
+- [API Sepcification](#api-sepcification)
+- [Contributors](#contributors)
+
+## Tservice Plugins (RECOMMENDATION)
+
+### Architecture of Tservice Plugin System
 
 ```
 Executable entrypoint file --->|
 Tservice Common Library    --->| --> wrapper --> plugin --> Tservice Loader --> Tservice API
-Plugin Library file        --->|  
+Plugin Library file        --->|
 
 ├── external                        # All external program, such as python/R/bash/rust program.
 │   ├── README.md
@@ -30,8 +44,10 @@ Plugin Library file        --->|
 └── renv.lock
 ```
 
-## How to install plugins for tservice
-### R Packages
+### How to install plugins for tservice
+
+#### R Packages
+
 - Connect tservice container
 
 ```
@@ -50,7 +66,8 @@ cd /plugins
 renv::restore()
 ```
 
-### Python Packages
+#### Python Packages
+
 - Connect tservice container
 
 ```
@@ -69,8 +86,10 @@ cd /plugins
 poetry install
 ```
 
-# Tservice Plugins (Obsolete)
-## Installation
+## Tservice Plugins (NOT RECOMMENDATION)
+
+### Installation
+
 - Install Conda and set channels (.condarc)
 
 ```
@@ -119,8 +138,10 @@ yum install zlib-devel
 install.packages(c("devtools", "BiocManager"))
 ```
 
-## List of plugins
-### ballgown2exp
+### List of plugins
+
+#### ballgown2exp
+
 ballgown2exp plugin is based on `rnaseq2report.R` and `multireport`.
 
 ```
@@ -136,8 +157,9 @@ install.packages(c("gmodels", "tidyr"))
 BiocManager::install("limma")
 ```
 
-### quartet-dnaseq-report
-quartet-dnaseq-report plugin is based on `[quartet-dnaseq-report](https://github.com/clinico-omics/quartet-dnaseq-report)`.
+#### quartet-dnaseq-report
+
+quartet-dnaseq-report plugin is based on [quartet-dnaseq-report](https://github.com/clinico-omics/quartet-dnaseq-report).
 
 ```
 # Launch base environment
@@ -148,10 +170,11 @@ pip install MultiQC
 pip install git+https://github.com/clinico-omics/quartet-dnaseq-report
 ```
 
-### quartet-rnaseq-report
+#### quartet-rnaseq-report
+
 quartet-rnaseq-report plugin is based on `multireport` and `exp2qcdt - Convert expression table to qc data table.`.
 
-#### Installation
+##### Installation
 
 ```
 # Launch base environment
@@ -166,10 +189,11 @@ install.packages("data.table")
 devtools::install_git("https://github.com/clinico-omics/exp2qcdt.git")
 ```
 
-### xps2pdf
+#### xps2pdf
+
 Plugin xps2pdf is depend on `libgxps` tools, so need to install libgxps tools before using xps2pdf plugin.
 
-#### Installation
+##### Installation
 
 > For Mac, `brew install libgxps`, more details in https://formulae.brew.sh/formula/libgxps
 > For Linux, `yum install libgxps-tools`
@@ -182,7 +206,7 @@ conda activate .env
 conda install libgxps
 ```
 
-#### Usage
+##### Usage
 
 ```bash
 # Not need another bash wrapper
@@ -199,18 +223,22 @@ OR
 ```
 
 ## API Sepcification
+
 ### Request
+
 - filepath
 - parameters
 - metadata
 
 ### Response
+
 - results
 - log
 - report
 - id
 
 ## Contributors
+
 - [Jingcheng Yang](https://github.com/yjcyxky)
 - [Jun Shang](https://github.com/stead99)
 - [Yaqing Liu](https://github.com/lyaqing)
