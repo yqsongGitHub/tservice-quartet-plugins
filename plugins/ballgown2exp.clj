@@ -55,8 +55,9 @@
 
 ;;; ------------------------------------------------ Event Metadata -------------------------------------------------
 (def metadata
-  {:route ["/ballgown2exp"
-           {:post {:summary "Convert ballgown files to experiment table and generate report."
+  {:route ["/report/ballgown2exp"
+           {:tags ["Report"]
+            :post {:summary "Convert ballgown files to experiment table and generate report."
                    :parameters {:body ballgown2exp-params-body}
                    :responses {201 {:body {:results string? :log string? :report string? :id string?}}}
                    :handler (fn [{{{:keys [filepath parameters metadata]} :body} :parameters}]

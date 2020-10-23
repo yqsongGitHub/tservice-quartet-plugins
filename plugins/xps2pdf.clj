@@ -46,8 +46,9 @@
 
 ;;; ------------------------------------------------ Event Metadata ------------------------------------------------
 (def metadata
-  {:route ["/xps2pdf"
-           {:post {:summary "Convert xps to pdf."
+  {:route ["/tool/xps2pdf"
+           {:tags ["Tool"]
+            :post {:summary "Convert xps to pdf."
                    :parameters {:body xps2pdf-params-body}
                    :responses {201 {:body {:download_url string? :files [string?] :log_url string?}}}
                    :handler (fn [{{{:keys [filepath]} :body} :parameters}]

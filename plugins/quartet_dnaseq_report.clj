@@ -95,8 +95,9 @@
 
 ;;; ------------------------------------------------ Event Metadata ------------------------------------------------
 (def metadata
-  {:route    ["/quartet-dnaseq-report"
-              {:post {:summary "Parse the results of the quartet-dnaseq-qc app and generate the report."
+  {:route    ["/report/quartet-dnaseq-report"
+              {:tags ["Report"]
+               :post {:summary "Parse the results of the quartet-dnaseq-qc app and generate the report."
                       :parameters {:body quartet-dna-report-params-body}
                       :responses {201 {:body {:results string? :log string? :report string? :id string?}}}
                       :handler (fn [{{{:keys [filepath parameters metadata]} :body} :parameters}]
