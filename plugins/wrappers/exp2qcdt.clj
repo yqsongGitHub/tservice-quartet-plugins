@@ -1,6 +1,6 @@
-(ns exp2qcdt
+(ns plugins.wrappers.exp2qcdt
   "A wrapper for exp2qcdt tool."
-  (:require [commons :refer [get-path-variable]]
+  (:require [plugins.libs.commons :refer [get-path-variable]]
             [clojure.java.shell :as shell :refer [sh]]))
 
 (defn call-exp2qcdt!

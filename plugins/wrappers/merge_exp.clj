@@ -1,6 +1,6 @@
-(ns merge-exp
+(ns plugins.wrappers.merge-exp
   "Merge expression files."
-  (:require [commons :refer [read-csv write-csv!]]))
+  (:require [plugins.libs.commons :refer [read-csv write-csv!]]))
 
 (set! *warn-on-reflection* true)
 

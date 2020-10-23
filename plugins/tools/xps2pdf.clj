@@ -1,18 +1,17 @@
-(ns xps2pdf
+(ns plugins.tools.xps2pdf
   (:require [clojure.core.async :as async]
-            [me.raynes.fs :as fs]
-            [tservice.lib.fs :as fs-lib]
-            [clojure.tools.logging :as log]
-            [xps :as xps-lib]
             [clojure.data.json :as json]
-            [tservice.events :as events]
-            [tservice.config :refer [get-workdir]]
-            [tservice.routes.specs :as specs]
-            [tservice.util :as u]
-            [clojure.string :as str]
             [clojure.java.io :as io]
             [clojure.spec.alpha :as s]
-            [spec-tools.core :as st]))
+            [clojure.string :as str]
+            [clojure.tools.logging :as log]
+            [me.raynes.fs :as fs]
+            [spec-tools.core :as st]
+            [tservice.config :refer [get-workdir]]
+            [tservice.events :as events]
+            [tservice.lib.fs :as fs-lib]
+            [tservice.util :as u]
+            [plugins.wrappers.xps :as xps-lib]))
 
 ;;; ------------------------------------------------ Event Specs ------------------------------------------------
 (s/def ::zip_mode
@@ -68,7 +67,7 @@
                                     pdf-path (fs-lib/join-paths relative-dir "merged.pdf")
                                     log-path (fs-lib/join-paths relative-dir "log")]
                                 (fs-lib/create-directories! to-dir)
-                         ; Launch the batchxps2pdf-convert
+                                ; Launch the batchxps2pdf-convert
                                 (spit (fs-lib/join-paths workdir log-path) (json/write-str {:status "Running" :msg ""}))
                                 (events/publish-event! :batchxps2pdf-convert {:from-files from-files :to-dir to-dir})
                                 {:status 201

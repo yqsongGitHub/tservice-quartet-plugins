@@ -1,19 +1,19 @@
-(ns ballgown2exp
+(ns plugins.reports.ballgown2exp
   (:require [clojure.core.async :as async]
-            [tservice.lib.fs :as fs-lib]
-            [clojure.tools.logging :as log]
-            [tservice.lib.filter-files :as ff]
-            [merge-exp :as me]
-            [rnaseq2report :as r2r]
-            [tservice.vendor.multiqc :as mq]
-            [tservice.events :as events]
             [clojure.data.json :as json]
-            [tservice.config :refer [get-workdir]]
-            [spec-tools.json-schema :as json-schema]
-            [tservice.util :as u]
-            [commons :as comm]
             [clojure.spec.alpha :as s]
-            [spec-tools.core :as st]))
+            [clojure.tools.logging :as log]
+            [plugins.libs.commons :as comm]
+            [plugins.wrappers.merge-exp :as me]
+            [plugins.wrappers.rnaseq2report :as r2r]
+            [spec-tools.core :as st]
+            [spec-tools.json-schema :as json-schema]
+            [tservice.config :refer [get-workdir]]
+            [tservice.events :as events]
+            [tservice.lib.filter-files :as ff]
+            [tservice.lib.fs :as fs-lib]
+            [tservice.util :as u]
+            [tservice.vendor.multiqc :as mq]))
 
 ;;; ------------------------------------------------ Event Specs ------------------------------------------------
 (s/def ::sample_id

@@ -1,14 +1,14 @@
-(ns graph
+(ns plugins.graphs
   (:require [clojure.core.async :as async]
-            [tservice.lib.fs :as fs-lib]
-            [clojure.tools.logging :as log]
             [clojure.data.json :as json]
-            [tservice.events :as events]
-            [tservice.config :refer [get-proxy-server env]]
-            [tservice.util :as u]
-            [clojure.string :as clj-str]
             [clojure.spec.alpha :as s]
-            [spec-tools.core :as st]))
+            [clojure.string :as clj-str]
+            [clojure.tools.logging :as log]
+            [spec-tools.core :as st]
+            [tservice.config :refer [get-proxy-server env]]
+            [tservice.events :as events]
+            [tservice.lib.fs :as fs-lib]
+            [tservice.util :as u]))
 
 ;;; ------------------------------------------------ Event Specs ------------------------------------------------
 (defn gen-route

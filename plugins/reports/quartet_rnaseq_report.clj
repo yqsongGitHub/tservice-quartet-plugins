@@ -1,19 +1,19 @@
-(ns quartet-rnaseq-report
+(ns plugins.reports.quartet-rnaseq-report
   (:require [clojure.core.async :as async]
-            [tservice.lib.fs :as fs-lib]
-            [clojure.tools.logging :as log]
-            [tservice.lib.filter-files :as ff]
-            [tservice.vendor.multiqc :as mq]
-            [tservice.events :as events]
             [clojure.data.json :as json]
-            [merge-exp :as me]
-            [commons :as comm]
-            [exp2qcdt :as exp2qcdt]
-            [tservice.config :refer [get-workdir env]]
-            [tservice.util :as u]
-            [spec-tools.json-schema :as json-schema]
             [clojure.spec.alpha :as s]
-            [spec-tools.core :as st]))
+            [clojure.tools.logging :as log]
+            [plugins.libs.commons :as comm]
+            [plugins.wrappers.exp2qcdt :as exp2qcdt]
+            [plugins.wrappers.merge-exp :as me]
+            [spec-tools.core :as st]
+            [spec-tools.json-schema :as json-schema]
+            [tservice.config :refer [get-workdir env]]
+            [tservice.events :as events]
+            [tservice.lib.filter-files :as ff]
+            [tservice.lib.fs :as fs-lib]
+            [tservice.util :as u]
+            [tservice.vendor.multiqc :as mq]))
 
 ;;; ------------------------------------------------ Event Specs ------------------------------------------------
 (s/def ::filepath

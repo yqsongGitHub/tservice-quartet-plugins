@@ -1,6 +1,6 @@
-(ns rnaseq2report
+(ns plugins.wrappers.rnaseq2report
   "A wrapper for rnaseq2report instance."
-  (:require [commons :refer [get-path-variable]]
+  (:require [plugins.libs.commons :refer [get-path-variable]]
             [clojure.java.shell :as shell :refer [sh]]))
 
 (defn call-rnaseq2report!

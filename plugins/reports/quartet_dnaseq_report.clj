@@ -1,16 +1,16 @@
-(ns quartet-dnaseq-report
+(ns plugins.reports.quartet-dnaseq-report
   (:require [clojure.core.async :as async]
-            [tservice.lib.fs :as fs-lib]
-            [clojure.tools.logging :as log]
-            [tservice.lib.filter-files :as ff]
-            [tservice.vendor.multiqc :as mq]
-            [tservice.events :as events]
             [clojure.data.json :as json]
-            [tservice.config :refer [get-workdir env]]
-            [spec-tools.json-schema :as json-schema]
-            [tservice.util :as u]
             [clojure.spec.alpha :as s]
-            [spec-tools.core :as st]))
+            [clojure.tools.logging :as log]
+            [spec-tools.core :as st]
+            [spec-tools.json-schema :as json-schema]
+            [tservice.config :refer [get-workdir env]]
+            [tservice.events :as events]
+            [tservice.lib.filter-files :as ff]
+            [tservice.lib.fs :as fs-lib]
+            [tservice.util :as u]
+            [tservice.vendor.multiqc :as mq]))
 
 ;;; ------------------------------------------------ Event Specs ------------------------------------------------
 (s/def ::filepath
@@ -153,8 +153,8 @@
   [datadir parameters metadata dest-dir]
   (log/info "Generate quartet dna report: " datadir parameters metadata dest-dir)
   (let [parameters-file (fs-lib/join-paths dest-dir
-                                         "results"
-                                         "data_generation_information.json")
+                                           "results"
+                                           "data_generation_information.json")
         files (ff/batch-filter-files datadir
                                      [".*call-fastqc/.*_fastqc.html"
                                       ".*call-fastqc/.*_fastqc.zip"

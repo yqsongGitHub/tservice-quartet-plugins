@@ -1,4 +1,4 @@
-(ns xps
+(ns plugins.wrappers.xps
   "XPS Convertors, e.g. xps2png, xps2jpg, xps2pdf etc."
   (:require [clojure.java.shell :as shell]
             [clojure.tools.logging :as log]

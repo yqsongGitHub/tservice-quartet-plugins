@@ -11,6 +11,8 @@ The repo is hosting all plugins for tservice.
 
 </div>
 
+Three Category for Plugins: Tool, Report, Graph
+
 ## Table of contents
 
 - [Tservice Plugins (RECOMMENDATION)](#tservice-plugins-recommendation)
