@@ -5,9 +5,10 @@
             [clojure.string :as clj-str]
             [clojure.tools.logging :as log]
             [spec-tools.core :as st]
-            [tservice.config :refer [get-proxy-server env]]
+            [tservice.config :refer [get-workdir get-proxy-server get-plugin-dir]]
             [tservice.events :as events]
             [tservice.lib.fs :as fs-lib]
+            [tservice.db.handler :as db-handler]
             [tservice.util :as u]))
 
 ;;; ------------------------------------------------ Event Specs ------------------------------------------------
@@ -19,8 +20,9 @@
            :parameters {:body schema}
            :responses {201 {:body {:access_url string? :log_url string?}}}
            :handler (fn [{{:keys [body]} :parameters}]
-                      (let [graph-name (clj-str/join "" [route-name "-" (u/rand-str 10)])]
-                        (events/publish-event! :graph {:name graph-name :parameters body :proxy-server-dir (:proxy-server-dir env)})
+                      (let [graph-name (clj-str/join "" [route-name "-" (u/rand-str 10)])
+                            workdir (get-workdir "Graph")]
+                        (events/publish-event! :graph {:name graph-name :parameters body :proxy-server-dir workdir})
                         {:status 201
                          :body {:access_url (fs-lib/join-paths (get-proxy-server) graph-name)
                                 :log_url ""}}))}}])
@@ -58,13 +60,15 @@
 (defn- graph! [name parameters proxy-server-dir]
   (log/info "Build a graph: " name parameters)
   (let [graph (first (clj-str/split name #"-[a-z0-9]+$"))
-        dest-dir (fs-lib/join-paths proxy-server-dir name)
+        relative-dir name
+        dest-dir (fs-lib/join-paths proxy-server-dir relative-dir)
         log-path (fs-lib/join-paths dest-dir "log")
-        graph-dir (fs-lib/join-paths (fs-lib/parent-path (:tservice-plugin-path env)) "graphs" graph)]
+        graph-dir (fs-lib/join-paths (get-plugin-dir) "graphs" graph)]
     ;; TODO: Re-generate config file for graph
     ;; All R packages are soft links when renv enable cache, 
     (fs-lib/copy-recursively graph-dir dest-dir {:nofollow-links true})
-    (spit log-path (json/write-str {:status "Success" :msg ""}))))
+    (spit log-path (json/write-str {:status "Success" :msg ""}))
+    (db-handler/create-report! name (str "Make a " graph) nil graph relative-dir "Graph")))
 
 (defn- process-graph-event!
   "Handle processing for a single event notification received on the graph-channel"
