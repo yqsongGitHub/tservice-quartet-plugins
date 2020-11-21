@@ -1,0 +1,19 @@
+{
+  "data": {
+    "dataFile": "violin_plot.rds",
+    "dataType": "rds"
+  },
+  "attributes": {
+    "title": "",
+    "xAxis": "stage",
+    "xTitle": "",
+    "xAngle": 45,
+    "yAxis": "age",
+    "yTitle": "",
+    "colorAttr": "stage",
+    "queryURL": "https://www.duckduckgo.com/?q=",
+    "subtitle": "",
+    "text": "",
+    "showpanel": true
+  }
+}

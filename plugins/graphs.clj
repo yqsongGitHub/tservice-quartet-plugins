@@ -1,15 +1,63 @@
 (ns plugins.graphs
   (:require [clojure.core.async :as async]
             [clojure.data.json :as json]
-            [clojure.spec.alpha :as s]
             [clojure.string :as clj-str]
-            [clojure.tools.logging :as log]
+            [clojure.spec.alpha :as s]
             [spec-tools.core :as st]
+            [clojure.tools.logging :as log]
             [tservice.config :refer [get-workdir get-proxy-server get-plugin-dir]]
             [tservice.events :as events]
             [tservice.lib.fs :as fs-lib]
+            [tservice.lib.filter-files :as ff]
             [tservice.db.handler :as db-handler]
-            [tservice.util :as u]))
+            [tservice.util :as u]
+            [clj-filesystem.core :as clj-fs]
+            [clojure.java.io :as io]
+            [selmer.parser :refer [render-file set-resource-path!]]))
+
+;;; ------------------------------------------------ Utility ------------------------------------------------
+(defn set-template-dir!
+  []
+  (set-resource-path! (fs-lib/join-paths (get-plugin-dir) "graphs")))
+
+(set-template-dir!)
+
+(defn guess-separator
+  [header]
+  (let [seps [\tab \, \; \space]
+        sep-map (->> (map #(hash-map % (count (clj-str/split header (re-pattern (str %))))) seps)
+                     (into {}))]
+    (key (apply max-key val sep-map))))
+
+(defn get-cols
+  [filepath]
+  (let [{:keys [protocol bucket prefix]} (ff/parse-path filepath)]
+    (clj-fs/with-conn protocol
+      (let [reader (io/reader (clj-fs/get-object bucket prefix))
+            header (first (line-seq reader))
+            separator (guess-separator header)]
+        (clj-str/split header (re-pattern (str separator)))))))
+
+(defn write-json
+  [json dest]
+  (with-open [wrtr (io/writer dest)]
+    (.write wrtr (json/write-str json))))
+
+(defn update-json-file
+  [src dest newMap]
+  (-> (json/read (io/reader src) :key-fn keyword)
+      (u/deep-merge newMap)
+      (write-json dest)))
+
+(defn detect-graph
+  [graph-dir]
+  (filter #(fs-lib/directory? (fs-lib/join-paths graph-dir %))
+          (fs-lib/children graph-dir)))
+
+(defn make-graph-metadata
+  [graph-dir]
+  (->> (detect-graph graph-dir)
+       (map (fn [graph] {:name graph :schema map?}))))
 
 ;;; ------------------------------------------------ Event Specs ------------------------------------------------
 (defn gen-route
@@ -27,6 +75,35 @@
                          :body {:access_url (fs-lib/join-paths (get-proxy-server) graph-name)
                                 :log_url ""}}))}}])
 
+(s/def ::filepath
+  (st/spec
+   {:spec                (s/and string? #(re-matches #"^(oss|s3|minio):\/\/.*" %))
+    :type                :string
+    :description         "File path for graph."
+    :swagger/default     nil
+    :reason              "The filepath must be string."}))
+
+(def ui-schema-query-params
+  "A spec for the body parameters."
+  (s/keys :req-un []
+          :opt-un [::filepath]))
+
+(defn gen-ui-schema-route
+  [route-name]
+  [(str "/graph/" route-name "/schema")
+   {:tags ["Graph Schema"]
+    :get {:summary (str "Get ui schema for the graph")
+          :parameters {:query ui-schema-query-params}
+          :responses {200 {:body map?}}
+          :handler (fn [{{{:keys [filepath]} :query} :parameters}]
+                     (let [cols (get-cols filepath)
+                           schema-file  (str route-name "/" "ui-schema.json.tmpl")
+                           columnOptions (vec (map (fn [col] {"value" col "label" col}) cols))
+                           json-str (render-file schema-file {:columnOptions columnOptions})]
+                       (log/info json-str)
+                       {:status 200
+                        :body (json/read-str json-str)}))}}])
+
 (defn gen-manifest
   [route-name]
   {:description (str "Graph Builder for " route-name)
@@ -43,8 +120,13 @@
    :app_name (str "yangjingcheng/" route-name)})
 
 ;;; ------------------------------------------------ Event Metadata ------------------------------------------------
+;; Schema Example -- {:data {:dataType "" :dataFile ""} :attributes {:xAxis "" ...}}
+;; Graph List -- (def graphs [{:name "boxplot-r" :schema map?} {:name "corrplot-r" :schema map?}])
+(def graphs (make-graph-metadata (fs-lib/join-paths (get-plugin-dir) "graphs")))
+
 (def metadata
-  {:routes (map #(gen-route (:name %) (:schema %)) [{:name "boxplot-r" :schema map?} {:name "corrplot-r" :schema map?}])
+  {:routes (concat (map #(gen-route (:name %) (:schema %)) graphs)
+                   (map #(gen-ui-schema-route (:name %)) graphs))
    :manifests (map gen-manifest ["boxplot-r" "corrplot-r"])})
 
 (def ^:const graph-topics
@@ -56,17 +138,23 @@
   (async/chan))
 
 ;;; ------------------------------------------------ Event Processing ------------------------------------------------
-
+;;; Parameters Example: {:data {:dataType "" :dataFile ""} :attributes {:xAxis "" ...}}
 (defn- graph! [name parameters proxy-server-dir]
   (log/info "Build a graph: " name parameters)
   (let [graph (first (clj-str/split name #"-[a-z0-9]+$"))
         relative-dir name
         dest-dir (fs-lib/join-paths proxy-server-dir relative-dir)
         log-path (fs-lib/join-paths dest-dir "log")
-        graph-dir (fs-lib/join-paths (get-plugin-dir) "graphs" graph)]
+        graph-dir (fs-lib/join-paths (get-plugin-dir) "graphs" graph)
+        data-file (:dataFile (:data parameters))]
     ;; TODO: Re-generate config file for graph
     ;; All R packages are soft links when renv enable cache, 
     (fs-lib/copy-recursively graph-dir dest-dir {:nofollow-links true})
+    (when ((comp not empty?) parameters)
+      (ff/copy-files! [data-file] dest-dir {:nofollow-links true})
+      (update-json-file (fs-lib/join-paths graph-dir "config.json")
+                        (fs-lib/join-paths dest-dir "config.json")
+                        (u/deep-merge parameters {:data {:dataFile (ff/basename data-file)}})))
     (spit log-path (json/write-str {:status "Success" :msg ""}))
     (db-handler/create-report! name (str "Make a " graph) nil graph relative-dir "Graph")))
 

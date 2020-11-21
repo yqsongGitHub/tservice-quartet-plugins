@@ -1,0 +1,22 @@
+{
+  "data": {
+    "dataFile": "dt_toplot.rds",
+    "dataType": "rds"
+  },
+  "attributes": {
+    "title": "",
+    "xAxis": "group",
+    "xTitle": "",
+    "yAxis": "value",
+    "yTitle": "",
+    "colorAttr": "DoubleBlind_0to24",
+    "labelAttr": "labels",
+    "legendTitle": "",
+    "queryURL": "https://www.duckduckgo.com/?q=",
+    "subtitle": "",
+    "text": "",
+    "showpanel": true,
+    "enableSelector": true,
+    "selectors": "LCL"
+  }
+}

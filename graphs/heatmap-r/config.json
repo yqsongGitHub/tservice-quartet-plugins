@@ -1,0 +1,20 @@
+{
+  "data": {
+    "dataFile": "heatmap.rds",
+    "dataType": "rds"
+  },
+  "attributes": {
+    "title": "",
+    "rowv": false,
+    "colv": false,
+    "distMethod": "NULL",
+    "hcMethod": "NULL",
+    "scale": "none",
+    "labRow": "None",
+    "colNameLst": "None",
+    "queryURL": "https://www.duckduckgo.com/?q=",
+    "subtitle": "",
+    "text": "",
+    "showpanel": true
+  }
+}

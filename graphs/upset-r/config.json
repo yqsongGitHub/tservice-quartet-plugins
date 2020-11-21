@@ -1,0 +1,18 @@
+{
+  "data": {
+    "dataFile": "movies.rds",
+    "dataType": "rds"
+  },
+  "attributes": {
+    "title": "",
+    "showEmptyInterSec": true,
+    "showBarNumbers": true,
+    "setSort": true,
+    "nIntersects": 10,
+    "assignmentType": "upset",
+    "queryURL": "https://www.duckduckgo.com/?q=",
+    "subtitle": "",
+    "text": "",
+    "showpanel": true
+  }
+}
