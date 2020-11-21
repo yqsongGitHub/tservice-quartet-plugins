@@ -1,4 +1,4 @@
-(ns plugins.graphs
+(ns plugins.charts
   (:require [clojure.core.async :as async]
             [clojure.data.json :as json]
             [clojure.string :as clj-str]
@@ -18,7 +18,7 @@
 ;;; ------------------------------------------------ Utility ------------------------------------------------
 (defn set-template-dir!
   []
-  (set-resource-path! (fs-lib/join-paths (get-plugin-dir) "graphs")))
+  (set-resource-path! (fs-lib/join-paths (get-plugin-dir) "charts")))
 
 (set-template-dir!)
 
@@ -121,12 +121,12 @@
 
 ;;; ------------------------------------------------ Event Metadata ------------------------------------------------
 ;; Schema Example -- {:data {:dataType "" :dataFile ""} :attributes {:xAxis "" ...}}
-;; Graph List -- (def graphs [{:name "boxplot-r" :schema map?} {:name "corrplot-r" :schema map?}])
-(def graphs (make-graph-metadata (fs-lib/join-paths (get-plugin-dir) "graphs")))
+;; Graph List -- (def charts [{:name "boxplot-r" :schema map?} {:name "corrplot-r" :schema map?}])
+(def charts (make-graph-metadata (fs-lib/join-paths (get-plugin-dir) "charts")))
 
 (def metadata
-  {:routes (concat (map #(gen-route (:name %) (:schema %)) graphs)
-                   (map #(gen-ui-schema-route (:name %)) graphs))
+  {:routes (concat (map #(gen-route (:name %) (:schema %)) charts)
+                   (map #(gen-ui-schema-route (:name %)) charts))
    :manifests (map gen-manifest ["boxplot-r" "corrplot-r"])})
 
 (def ^:const graph-topics
@@ -145,7 +145,7 @@
         relative-dir name
         dest-dir (fs-lib/join-paths proxy-server-dir relative-dir)
         log-path (fs-lib/join-paths dest-dir "log")
-        graph-dir (fs-lib/join-paths (get-plugin-dir) "graphs" graph)
+        graph-dir (fs-lib/join-paths (get-plugin-dir) "charts" graph)
         data-file (:dataFile (:data parameters))]
     ;; TODO: Re-generate config file for graph
     ;; All R packages are soft links when renv enable cache, 
