@@ -1,7 +1,7 @@
 library(configr)
 library(dplyr)
 
-config <- read.config(file = 'shiny.ini')
+config <- read.config(file = 'config.json')
 dataConfig <- config$data
 attributes <- config$attributes
 
