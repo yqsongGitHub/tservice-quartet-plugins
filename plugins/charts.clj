@@ -49,50 +49,50 @@
       (u/deep-merge newMap)
       (write-json dest)))
 
-(defn detect-graph
-  [graph-dir]
-  (filter #(fs-lib/directory? (fs-lib/join-paths graph-dir %))
-          (fs-lib/children graph-dir)))
+(defn detect-chart
+  [chart-dir]
+  (filter #(fs-lib/directory? (fs-lib/join-paths chart-dir %))
+          (fs-lib/children chart-dir)))
 
-(defn make-graph-metadata
-  [graph-dir]
-  (->> (detect-graph graph-dir)
-       (map (fn [graph] {:name graph :schema map?}))))
+(defn make-chart-metadata
+  [chart-dir]
+  (->> (detect-chart chart-dir)
+       (map (fn [chart] {:name chart :schema map?}))))
 
 ;;; ------------------------------------------------ Event Specs ------------------------------------------------
 (defn gen-route
   [route-name schema]
-  [(str "/graph/" route-name)
-   {:tags ["Graph"]
-    :post {:summary (str "Create a graph for " route-name)
+  [(str "/chart/" route-name)
+   {:tags ["Chart"]
+    :post {:summary (str "Create a chart for " route-name)
            :parameters {:body schema}
            :responses {201 {:body {:access_url string? :log_url string?}}}
            :handler (fn [{{:keys [body]} :parameters}]
-                      (let [graph-name (clj-str/join "" [route-name "-" (u/rand-str 10)])
-                            workdir (get-workdir "Graph")]
-                        (events/publish-event! :graph {:name graph-name :parameters body :proxy-server-dir workdir})
+                      (let [chart-name (clj-str/join "" [route-name "-" (u/rand-str 10)])
+                            workdir (get-workdir "Chart")]
+                        (events/publish-event! :chart {:name chart-name :parameters body :proxy-server-dir workdir})
                         {:status 201
-                         :body {:access_url (fs-lib/join-paths (get-proxy-server) graph-name)
+                         :body {:access_url (str (clj-str/replace (get-proxy-server) #"/$" "") "/" chart-name)
                                 :log_url ""}}))}}])
 
 (s/def ::filepath
   (st/spec
    {:spec                (s/and string? #(re-matches #"^(oss|s3|minio):\/\/.*" %))
     :type                :string
-    :description         "File path for graph."
+    :description         "File path for chart."
     :swagger/default     nil
     :reason              "The filepath must be string."}))
 
 (def ui-schema-query-params
   "A spec for the body parameters."
-  (s/keys :req-un []
-          :opt-un [::filepath]))
+  (s/keys :req-un [::filepath]
+          :opt-un []))
 
 (defn gen-ui-schema-route
   [route-name]
-  [(str "/graph/" route-name "/schema")
-   {:tags ["Graph Schema"]
-    :get {:summary (str "Get ui schema for the graph")
+  [(str "/chart/" route-name "/schema")
+   {:tags ["Chart Schema"]
+    :get {:summary (str "Get ui schema for the chart")
           :parameters {:query ui-schema-query-params}
           :responses {200 {:body map?}}
           :handler (fn [{{{:keys [filepath]} :query} :parameters}]
@@ -100,16 +100,16 @@
                            schema-file  (str route-name "/" "ui-schema.json.tmpl")
                            columnOptions (vec (map (fn [col] {"value" col "label" col}) cols))
                            json-str (render-file schema-file {:columnOptions columnOptions})]
-                       (log/info json-str)
+                       (log/debug json-str)
                        {:status 200
                         :body (json/read-str json-str)}))}}])
 
 (defn gen-manifest
   [route-name]
-  {:description (str "Graph Builder for " route-name)
-   :category "Graph"
+  {:description (str "Chart Builder for " route-name)
+   :category "Chart"
    :home "https://github.com/clinico-omics/tservice-plugins"
-   :name (str "Build Interactive Graph/Plot for " route-name)
+   :name (str "Build Interactive Chart/Plot for " route-name)
    :source "PGx"
    :short_name route-name
    :icons [{:src "", :type "image/png", :sizes "192x192"}
@@ -121,58 +121,58 @@
 
 ;;; ------------------------------------------------ Event Metadata ------------------------------------------------
 ;; Schema Example -- {:data {:dataType "" :dataFile ""} :attributes {:xAxis "" ...}}
-;; Graph List -- (def charts [{:name "boxplot-r" :schema map?} {:name "corrplot-r" :schema map?}])
-(def charts (make-graph-metadata (fs-lib/join-paths (get-plugin-dir) "charts")))
+;; Chart List -- (def charts [{:name "boxplot-r" :schema map?} {:name "corrplot-r" :schema map?}])
+(def charts (make-chart-metadata (fs-lib/join-paths (get-plugin-dir) "charts")))
 
 (def metadata
   {:routes (concat (map #(gen-route (:name %) (:schema %)) charts)
                    (map #(gen-ui-schema-route (:name %)) charts))
    :manifests (map gen-manifest ["boxplot-r" "corrplot-r"])})
 
-(def ^:const graph-topics
-  "The `Set` of event topics which are subscribed to for use in graph tracking."
-  #{:graph})
+(def ^:const chart-topics
+  "The `Set` of event topics which are subscribed to for use in chart tracking."
+  #{:chart})
 
-(def ^:private graph-channel
-  "Channel for receiving event graph we want to subscribe to for graph events."
+(def ^:private chart-channel
+  "Channel for receiving event chart we want to subscribe to for chart events."
   (async/chan))
 
 ;;; ------------------------------------------------ Event Processing ------------------------------------------------
 ;;; Parameters Example: {:data {:dataType "" :dataFile ""} :attributes {:xAxis "" ...}}
-(defn- graph! [name parameters proxy-server-dir]
-  (log/info "Build a graph: " name parameters)
-  (let [graph (first (clj-str/split name #"-[a-z0-9]+$"))
+(defn- chart! [name parameters proxy-server-dir]
+  (log/info "Build a chart: " name parameters)
+  (let [chart (first (clj-str/split name #"-[a-z0-9]+$"))
         relative-dir name
         dest-dir (fs-lib/join-paths proxy-server-dir relative-dir)
         log-path (fs-lib/join-paths dest-dir "log")
-        graph-dir (fs-lib/join-paths (get-plugin-dir) "charts" graph)
+        chart-dir (fs-lib/join-paths (get-plugin-dir) "charts" chart)
         data-file (:dataFile (:data parameters))]
-    ;; TODO: Re-generate config file for graph
+    ;; TODO: Re-generate config file for chart
     ;; All R packages are soft links when renv enable cache, 
-    (fs-lib/copy-recursively graph-dir dest-dir {:nofollow-links true})
+    (fs-lib/copy-recursively chart-dir dest-dir {:nofollow-links true})
     (when ((comp not empty?) parameters)
       (ff/copy-files! [data-file] dest-dir {:nofollow-links true})
-      (update-json-file (fs-lib/join-paths graph-dir "config.json")
+      (update-json-file (fs-lib/join-paths chart-dir "config.json")
                         (fs-lib/join-paths dest-dir "config.json")
                         (u/deep-merge parameters {:data {:dataFile (ff/basename data-file)}})))
     (spit log-path (json/write-str {:status "Success" :msg ""}))
-    (db-handler/create-report! name (str "Make a " graph) nil graph relative-dir "Graph")))
+    (db-handler/create-report! name (str "Make a " chart) nil chart relative-dir "Chart")))
 
-(defn- process-graph-event!
-  "Handle processing for a single event notification received on the graph-channel"
-  [graph-event]
+(defn- process-chart-event!
+  "Handle processing for a single event notification received on the chart-channel"
+  [chart-event]
   ;; try/catch here to prevent individual topic processing exceptions from bubbling up.  better to handle them here.
   (try
-    (when-let [{topic :topic object :item} graph-event]
+    (when-let [{topic :topic object :item} chart-event]
       ;; TODO: only if the definition changed??
       (case (events/topic->model topic)
-        "graph" (graph! (:name object) (:parameters object) (:proxy-server-dir object))))
+        "chart" (chart! (:name object) (:parameters object) (:proxy-server-dir object))))
     (catch Throwable e
-      (log/warn (format "Failed to process graph event. %s" (:topic graph-event)) e))))
+      (log/warn (format "Failed to process chart event. %s" (:topic chart-event)) e))))
 
 ;;; --------------------------------------------------- Lifecycle ----------------------------------------------------
 
 (defn events-init
-  "Automatically called during startup; start event listener for graph events."
+  "Automatically called during startup; start event listener for chart events."
   []
-  (events/start-event-listener! graph-topics graph-channel process-graph-event!))
+  (events/start-event-listener! chart-topics chart-channel process-chart-event!))
