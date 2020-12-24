@@ -53,7 +53,7 @@
                    :handler (fn [{{{:keys [filepath]} :body} :parameters}]
                               (let [workdir (get-workdir)
                                     from-path (if (re-matches #"^file:\/\/\/.*" filepath)
-                                         ; Absolute path with file://
+                                                ; Absolute path with file://
                                                 (str/replace filepath #"^file:\/\/" "")
                                                 (fs-lib/join-paths workdir (str/replace filepath #"^file:\/\/" "")))
                                     from-files (if (fs-lib/directory? from-path)
@@ -77,7 +77,7 @@
                                         :zip_url zip-path
                                         :pdf_url pdf-path}}))}}]
    :manifest {:description "Convert XPS to PDF File."
-              :category "Convertor"
+              :category "Tool"
               :home "https://github.com/clinico-omics/tservice-plugins"
               :name "XPS to PDF"
               :source "PGx"

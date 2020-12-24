@@ -1,7 +1,8 @@
 (ns plugins.libs.commons
-  (:require [tservice.config :refer [env]]
+  (:require [tservice.config :refer [env get-plugin-dir]]
             [clojure.java.shell :as shell :refer [sh]]
             [clojure.data.csv :as csv]
+            [tservice.lib.fs :as fs-lib]
             [clojure.string :as clj-str]
             [clojure.java.io :as io])
   (:import [org.apache.commons.io.input BOMInputStream]))
@@ -13,6 +14,10 @@
     (if external-bin
       (str external-bin ":" sys-path)
       sys-path)))
+
+(defn get-external-root
+  []
+  (fs-lib/join-paths (get-plugin-dir) "external"))
 
 (defn exist-bin?
   [name]

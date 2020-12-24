@@ -91,7 +91,7 @@
 (defn gen-ui-schema-route
   [route-name]
   [(str "/chart/" route-name "/schema")
-   {:tags ["Chart Schema"]
+   {:tags ["Chart"]
     :get {:summary (str "Get ui schema for the chart")
           :parameters {:query ui-schema-query-params}
           :responses {200 {:body map?}}
