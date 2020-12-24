@@ -1,9 +1,12 @@
-#### Requirements
+## Requirements
 
 - optparse
 - SigMA
 
-#### R环境下安装SigMa
+## R环境下安装SigMa
+wget http://nordata-cdn.oss-cn-shanghai.aliyuncs.com/BSgenome.Hsapiens.UCSC.hg19_1.4.3.tar.gz
+wget http://nordata-cdn.oss-cn-shanghai.aliyuncs.com/SigMA_1.0.0.0.tar.gz
+
 ```
 BiocManager::install("BSgenome")
 install.packages("BSgenome.Hsapiens.UCSC.hg19_1.4.3.tar.gz", repos=NULL)
@@ -12,7 +15,7 @@ renv::restore()
 install.packages("SigMA_1.0.0.0.tar.gz", repos=NULL)
 ```
 
-#### quick start
+## Quick Start
 
 ```
 # 准备input file,这里maf文件，也可以选择vcf文件
@@ -24,7 +27,7 @@ $ Rscript sigma.R -h
 
 ```
 
-#### 参数
+### 参数
 - -i,--input_file,pointer to the directory where input vcf or maf files reside,example './sample.maf' 
 - -o,--output_file,the name of output file,default is sigma-results.csv
 - -f,--file_type,'maf' or 'vcf'
@@ -41,7 +44,7 @@ $ Rscript sigma.R -h
 - -c,--check_msi, a boolean which determines whether the user wants to identify micro-sattelite instable 
                 tumors
 
-#### 注意
+## 注意
 ```
 # 直接从github上下载会报错
 devtools::install_github("parklab/SigMA")
@@ -50,6 +53,7 @@ install.packages("SigMA_1.0.0.0.tar.gz", repos=NULL)
 # 依赖包BSgenome.Hsapiens.UCSC.hg19的下载，如果下载不成功，可以本地下载
 BiocManager::install("BSgenome.Hsapiens.UCSC.hg19")
 ```
-#### 官网地址
+
+## 官网地址
 http://compbio.med.harvard.edu/sigma/
 

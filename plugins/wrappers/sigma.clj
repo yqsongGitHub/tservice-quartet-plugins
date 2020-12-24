@@ -3,7 +3,6 @@
   (:require [plugins.libs.commons :refer [get-path-variable get-external-root]]
             [clojure.java.shell :as shell :refer [sh]]
             [tservice.lib.fs :as fs-lib]
-            [clojure.tools.logging :as log]
             [clojure.string :as str]))
 
 (defn hashmap->parameters

@@ -1,6 +1,7 @@
 (ns plugins.wrappers.exp2qcdt
   "A wrapper for exp2qcdt tool."
-  (:require [plugins.libs.commons :refer [get-path-variable]]
+  (:require [plugins.libs.commons :refer [get-path-variable get-external-root]]
+            [tservice.lib.fs :as fs-lib]
             [clojure.java.shell :as shell :refer [sh]]))
 
 (defn call-exp2qcdt!
@@ -13,8 +14,9 @@
   (shell/with-sh-env {:PATH   (get-path-variable)
                       :LC_ALL "en_US.utf-8"
                       :LANG   "en_US.utf-8"}
-    (let [command ["bash" "-c"
-                   (format "exp2qcdt.sh -e %s -m %s -d %s" exp-file meta-file result-dir)]
+    (let [exp2qcdt-cmd (fs-lib/join-paths (get-external-root) "exp2qcdt" "exp2qcdt.sh")
+          command ["bash" "-c"
+                   (format "%s -e %s -m %s -d %s" exp2qcdt-cmd exp-file meta-file result-dir) :dir (fs-lib/join-paths (get-external-root) "exp2qcdt")]
           result  (apply sh command)
           status (if (= (:exit result) 0) "Success" "Error")
           msg (str (:out result) "\n" (:err result))]

@@ -226,7 +226,7 @@ if (length(args) < 3) {
       file_test("-d", result_dir)) {
 
     exe_path <- get_exe_path()
-    anno_file <- file.path(exe_path, "rnaseq2report", "gene_id_convert_table_rnaseq_latest.txt")
+    anno_file <- file.path(exe_path, "gene_id_convert_table_rnaseq_latest.txt")
 
     rt_exp_g <- read.csv(exp_table_file, sep = "\t", header = TRUE, row.names = 1)
     rt_group <- read.csv(phenotype_file, sep = "\t", header = TRUE)
