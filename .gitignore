@@ -18,3 +18,6 @@ pom.xml.asc
 external/sigma/BSgenome.Hsapiens.UCSC.hg19_1.4.3.tar.gz
 external/sigma/SigMA_1.0.0.0.tar.gz
 external/sigma/data/
+.lsp
+.clj-kondo
+external/sigma/.Rhistory

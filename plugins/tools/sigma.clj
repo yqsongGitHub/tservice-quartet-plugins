@@ -100,7 +100,7 @@
                                                 (fs-lib/join-paths workdir (str/replace filepath #"^file:\/\/" "")))
                                     uuid (u/uuid)
                                     relative-dir (fs-lib/join-paths "download" uuid)
-                                    output-file (fs-lib/join-paths relative-dir "sigma-result.csv")
+                                    output-file (fs-lib/join-paths relative-dir "sigma-results.csv")
                                     log-path (fs-lib/join-paths relative-dir "log")
                                     to-dir (fs-lib/join-paths workdir relative-dir)]
                                 (fs-lib/create-directories! to-dir)

@@ -16,7 +16,7 @@
                       :LANG   "en_US.utf-8"}
     (let [exp2qcdt-cmd (fs-lib/join-paths (get-external-root) "exp2qcdt" "exp2qcdt.sh")
           command ["bash" "-c"
-                   (format "%s -e %s -m %s -d %s" exp2qcdt-cmd exp-file meta-file result-dir) :dir (fs-lib/join-paths (get-external-root) "exp2qcdt")]
+                   (format "%s -e %s -m %s -o %s" exp2qcdt-cmd exp-file meta-file result-dir) :dir (fs-lib/join-paths (get-external-root) "exp2qcdt")]
           result  (apply sh command)
           status (if (= (:exit result) 0) "Success" "Error")
           msg (str (:out result) "\n" (:err result))]

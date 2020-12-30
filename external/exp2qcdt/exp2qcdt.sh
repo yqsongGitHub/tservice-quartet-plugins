@@ -88,8 +88,7 @@ else
   RESULT_DIR=`realpath $RESULT_DIR`
 fi
 
-DATETIME=`date +%s%N`
-TEMP=$(mktemp "${TMPDIR:-/tmp/}${DATETIME}")
+TEMP=$(mktemp)
 
 echo "Run script: $TEMP"
 cat <<EOF > "$TEMP"

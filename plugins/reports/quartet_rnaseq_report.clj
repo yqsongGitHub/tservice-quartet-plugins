@@ -206,8 +206,9 @@
       (spit parameters-file (json/write-str parameters))
       (comm/write-csv! metadata-file metadata)
       (let [exp2qcdt-result (exp2qcdt/call-exp2qcdt! exp-filepath metadata-file result-dir)
-            multiqc-result (when (= (:status exp2qcdt-result) "Success")
-                             (mq/multiqc result-dir dest-dir {:config config :template "quartet_rnaseq_report"}))
+            multiqc-result (if (= (:status exp2qcdt-result) "Success")
+                             (mq/multiqc result-dir dest-dir {:config config :template "quartet_rnaseq_report"})
+                             exp2qcdt-result)
             result {:status (:status multiqc-result)
                     :msg (:msg multiqc-result)}
             log (json/write-str result)]
