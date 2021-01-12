@@ -21,3 +21,5 @@ external/sigma/data/
 .lsp
 .clj-kondo
 external/sigma/.Rhistory
+cache/
+renv/
