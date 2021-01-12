@@ -13,9 +13,34 @@
             [tservice.lib.filter-files :as ff]
             [tservice.lib.fs :as fs-lib]
             [tservice.util :as u]
+            [tservice.db.handler :as db-handler]
             [tservice.vendor.multiqc :as mq]))
 
 ;;; ------------------------------------------------ Event Specs ------------------------------------------------
+(s/def ::name
+  (st/spec
+   {:spec                string?
+    :type                :string
+    :description         "The name of the report"
+    :swagger/default     ""
+    :reason              "Not a valid report name"}))
+
+(s/def ::description
+  (st/spec
+   {:spec                string?
+    :type                :string
+    :description         "Description of the report"
+    :swagger/default     ""
+    :reason              "Not a valid description."}))
+
+(s/def ::project_id
+  (st/spec
+   {:spec                #(some? (re-matches #"[a-f0-9]{8}(-[a-f0-9]{4}){4}[a-f0-9]{8}" %))
+    :type                :string
+    :description         "project-id"
+    :swagger/default     "40644dec-1abd-489f-a7a8-1011a86f40b0"
+    :reason              "Not valid a project-id."}))
+
 (s/def ::filepath
   (st/spec
    {:spec                (s/and string? #(re-matches #"^[a-zA-Z0-9]+:\/(\/|\.\/)[a-zA-Z0-9_]+.*" %))
@@ -123,7 +148,8 @@
 
 (def quartet-rna-report-params-body
   "A spec for the body parameters."
-  (s/keys :req-un [::filepath ::metadata ::parameters]))
+  (s/keys :req-un [::name ::description ::filepath ::metadata ::parameters]
+          :opt-un [::project_id]))
 
 ;;; ------------------------------------------------ Event Metadata ------------------------------------------------
 (def metadata
@@ -132,7 +158,7 @@
                :post {:summary "Parse the results of the quartet-rnaseq-qc app and generate the report."
                       :parameters {:body quartet-rna-report-params-body}
                       :responses {201 {:body {:results string? :log string? :report string? :id string?}}}
-                      :handler (fn [{{{:keys [filepath metadata parameters]} :body} :parameters}]
+                      :handler (fn [{{{:keys [name description project_id filepath metadata parameters]} :body} :parameters}]
                                  (let [workdir (get-workdir)
                                        from-path (u/replace-path filepath workdir)
                                        uuid (u/uuid)
@@ -146,6 +172,7 @@
                                                            :parameters parameters
                                                            :metadata metadata
                                                            :dest-dir to-dir})
+                                   (db-handler/create-report! name description project_id "quartet_rnaseq_report" relative-dir "multireport")
                                    {:status 201
                                     :body {:results (fs-lib/join-paths relative-dir)
                                            :report (fs-lib/join-paths relative-dir "multiqc.html")
