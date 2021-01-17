@@ -1,5 +1,5 @@
 (ns plugins.libs.commons
-  (:require [tservice.config :refer [env get-plugin-dir]]
+  (:require [tservice.config :refer [env get-plugin-dir get-workdir]]
             [clojure.java.shell :as shell :refer [sh]]
             [clojure.data.csv :as csv]
             [tservice.lib.fs :as fs-lib]
@@ -64,3 +64,16 @@
         rows (mapv #(mapv % columns) row-data)]
     (with-open [file (io/writer path)]
       (csv/write-csv file (cons headers rows) :separator \tab))))
+
+(defn is-localpath?
+  [filepath]
+  (re-matches #"^file:\/\/.*" filepath))
+
+(defn correct-filepath
+  [filepath]
+  (if (is-localpath? filepath)
+    (if (re-matches #"^file:\/\/\/.*" filepath)
+    ; Absolute path with file://
+      (clj-str/replace filepath #"^file:\/\/" "")
+      (fs-lib/join-paths (get-workdir) (clj-str/replace filepath #"^file:\/\/" "")))
+    filepath))
