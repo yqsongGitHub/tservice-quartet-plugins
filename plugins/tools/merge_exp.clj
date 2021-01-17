@@ -6,7 +6,7 @@
             [spec-tools.core :as st]
             [spec-tools.json-schema :as json-schema]
             [tservice.lib.filter-files :as ff]
-            [tservice.config :refer [get-workdir]]
+            [tservice.config :refer [get-workdir env]]
             [tservice.events :as events]
             [plugins.wrappers.merge-exp :as me]
             [tservice.lib.fs :as fs-lib]
@@ -59,7 +59,7 @@
                                     uuid (u/uuid)
                                     relative-dir (fs-lib/join-paths "download" uuid)
                                     output-file (fs-lib/join-paths relative-dir "fpkm.csv")
-                                    report-file (fs-lib/join-paths relative-dir "multiqc.html")
+                                    report-file (fs-lib/join-paths relative-dir "multiqc_report.html")
                                     log-path (fs-lib/join-paths relative-dir "log")
                                     to-dir (fs-lib/join-paths workdir relative-dir)]
                                 (fs-lib/create-directories! to-dir)
@@ -128,20 +128,26 @@
       (log/info "Merge gene experiment files from ballgown directory to a experiment table: " ballgown-dir output-file)
       (ff/copy-files! files ballgown-dir {:replace-existing true})
       (me/merge-exp-files! (ff/list-files ballgown-dir {:mode "file"}) output-file)
-      (when enable-multiqc
+      (if enable-multiqc
         (let [files (ff/batch-filter-files data-dir [".*call-fastqc/.*.zip"
                                                      ".*call-fastqscreen/.*screen.txt"
                                                      ".*call-qualimap/.*bamqc"
                                                      ".*call-qualimap/.*bamqc_qualimap.zip"
                                                      ".*call-qualimap/.*RNAseq"
                                                      ".*call-qualimap/.*RNAseq_qualimap.zip"])
-              multiqc-dir (fs-lib/join-paths dest-dir "multiqc")]
+              multiqc-dir (fs-lib/join-paths dest-dir "multiqc")
+              config (fs-lib/join-paths (:tservice-plugin-path env) "config/multiqc_report.yaml")]
           (fs-lib/create-directories! multiqc-dir)
           (ff/copy-files! files multiqc-dir {:replace-existing true})
           (doseq [file (ff/batch-filter-files multiqc-dir [".*bamqc_qualimap.zip" ".*RNAseq_qualimap.zip"])]
             (decompression-tar file))
-          (mq/multiqc multiqc-dir dest-dir {:title "MultiQC Report"})))
-      (spit log-path (json/write-str {:status "Success" :msg ""}))
+          (let [multiqc-result (mq/multiqc multiqc-dir dest-dir {:title "MultiQC Report" :template "default" :config config})
+                result {:status (:status multiqc-result)
+                        :msg (:msg multiqc-result)}
+                log (json/write-str result)]
+            (log/info "Status: " result)
+            (spit log-path log)))
+        (spit log-path (json/write-str {:status "Success" :msg ""})))
       (catch Exception e
         (let [log (json/write-str {:status "Error" :msg (.toString e)})]
           (log/info "Status: " log)
