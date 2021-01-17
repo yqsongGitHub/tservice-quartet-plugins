@@ -56,6 +56,11 @@
        (->> (csv/read-csv reader :separator (guess-separator file))
             csv-data->maps)))))
 
+(defn vec-remove
+  "Remove elem in coll"
+  [pos coll]
+  (vec (concat (subvec coll 0 pos) (subvec coll (inc pos)))))
+
 (defn write-csv!
   "Write row-data to a csv file, row-data is a vector that each element is a map."
   [path row-data]
@@ -64,6 +69,12 @@
         rows (mapv #(mapv % columns) row-data)]
     (with-open [file (io/writer path)]
       (csv/write-csv file (cons headers rows) :separator \tab))))
+
+(defn write-csv-by-cols! [path row-data columns]
+  (let [headers (map name columns)
+        rows (mapv #(mapv % columns) row-data)]
+    (with-open [file (io/writer path)]
+      (csv/write-csv file (cons headers rows)))))
 
 (defn is-localpath?
   [filepath]
