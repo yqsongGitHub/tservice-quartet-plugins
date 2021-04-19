@@ -3,7 +3,7 @@
             [clojure.data.json :as json]
             [clojure.spec.alpha :as s]
             [clojure.tools.logging :as log]
-            [plugins.libs.commons :as comm]
+            [plugins.libs.commons :as comm :refer [get-path-variable]]
             [plugins.wrappers.exp2qcdt :as exp2qcdt]
             [plugins.wrappers.merge-exp :as me]
             [spec-tools.core :as st]
@@ -14,6 +14,7 @@
             [tservice.lib.fs :as fs-lib]
             [tservice.util :as u]
             [tservice.db.handler :as db-handler]
+            [clojure.java.shell :as shell :refer [sh]]
             [tservice.vendor.multiqc :as mq]))
 
 ;;; ------------------------------------------------ Event Specs ------------------------------------------------
@@ -43,7 +44,7 @@
 
 (s/def ::filepath
   (st/spec
-   {:spec                (s/and string? #(re-matches #"^[a-zA-Z0-9]+:\/(\/|\.\/)[a-zA-Z0-9_]+.*" %))
+   {:spec                (s/and string? #(re-matches #"^[a-zA-Z0-9]+:\/\/(\/|\.\/)[a-zA-Z0-9_]+.*" %))
     :type                :string
     :description         "File path for covertor."
     :swagger/default     nil
@@ -207,6 +208,19 @@
 
 ;;; ------------------------------------------------ Event Processing ------------------------------------------------
 
+(defn- decompression-tar
+  [filepath]
+  (shell/with-sh-env {:PATH   (get-path-variable)
+                      :LC_ALL "en_US.utf-8"
+                      :LANG   "en_US.utf-8"}
+    (let [command ["bash" "-c"
+                   (format "tar -xvf %s -C %s" filepath (fs-lib/parent-path filepath))]
+          result  (apply sh command)
+          status (if (= (:exit result) 0) "Success" "Error")
+          msg (str (:out result) "\n" (:err result))]
+      {:status status
+       :msg msg})))
+
 (defn- quartet-rnaseq-report!
   "Chaining Pipeline: filter-files -> copy-files -> merge_exp_file -> exp2qcdt -> multiqc."
   [datadir parameters metadata dest-dir]
@@ -217,24 +231,55 @@
         parameters-file (fs-lib/join-paths dest-dir
                                            "results"
                                            "general-info.json")
-        files (ff/batch-filter-files datadir [".*call-ballgown/.*.txt"])
+        files-fpkm (ff/batch-filter-files datadir [".*call-ballgown/.*.txt"])
+        files-count (ff/batch-filter-files datadir [".*call-count/.*gene_count_matrix.csv"])
+        files-qualimap-bam (ff/batch-filter-files datadir [".*call-qualimapBAMqc/.*tar.gz"])
+        files-qualimap-RNA (ff/batch-filter-files datadir [".*call-qualimapRNAseq/.*tar.gz"])
+        files-fastqc (ff/batch-filter-files datadir [".*call-fastqc/.*.zip"])
+        files-fastqscreen (ff/batch-filter-files datadir [".*call-fastqscreen/.*.txt"])
         ballgown-dir (fs-lib/join-paths dest-dir "ballgown")
-        exp-filepath (fs-lib/join-paths dest-dir "fpkm.txt")
+        count-dir (fs-lib/join-paths dest-dir "count")
+        exp-fpkm-filepath (fs-lib/join-paths dest-dir "fpkm.txt")
+        exp-count-filepath (fs-lib/join-paths dest-dir "count.txt")
         result-dir (fs-lib/join-paths dest-dir "results")
+        qualimap-bam-dir (fs-lib/join-paths result-dir "post_alignment_qc/qualimap_bam")
+        qualimap-RNA-dir (fs-lib/join-paths result-dir "post_alignment_qc/qualimap_rnaseq")
+        fastqc-dir (fs-lib/join-paths result-dir "rawqc/fastq_screen")
+        fastqscreen-dir (fs-lib/join-paths result-dir "rawqc/fastqc")
         log-path (fs-lib/join-paths dest-dir "log")
-        config (fs-lib/join-paths (:tservice-plugin-path env) "config/quartet_rnaseq_report.yaml")]
+        config (fs-lib/join-paths (:tservice-plugin-path env) "plugins/config/quartet_rnaseq_report.yaml")]
     (try
       (fs-lib/create-directories! ballgown-dir)
+      (fs-lib/create-directories! count-dir)
       (fs-lib/create-directories! result-dir)
-      (log/info "Merge these files: " files)
-      (log/info "Merge gene experiment files from ballgown directory to a experiment table: " ballgown-dir exp-filepath)
-      (ff/copy-files! files ballgown-dir {:replace-existing true})
-      (me/merge-exp-files! (ff/list-files ballgown-dir {:mode "file"}) exp-filepath)
+      (fs-lib/create-directories! qualimap-bam-dir)
+      (fs-lib/create-directories! qualimap-RNA-dir)
+      (fs-lib/create-directories! fastqc-dir)
+      (fs-lib/create-directories! fastqscreen-dir)
+      (log/info "Merge these files: " files-fpkm)
+      (log/info "Merge gene experiment files from ballgown directory to a experiment table: " ballgown-dir exp-fpkm-filepath)
+      (log/info "Merge these files: " files-count)
+      (log/info "Merge gene experiment files from count directory to a experiment table: " count-dir exp-count-filepath)
+      (ff/copy-files! files-fpkm ballgown-dir {:replace-existing true})
+      (ff/copy-files! files-count count-dir {:replace-existing true})
+      (ff/copy-files! files-qualimap-bam qualimap-bam-dir {:replace-existing true})
+      (ff/copy-files! files-qualimap-RNA qualimap-RNA-dir {:replace-existing true})
+      (ff/copy-files! files-fastqc fastqc-dir {:replace-existing true})
+      (ff/copy-files! files-fastqscreen fastqscreen-dir {:replace-existing true})
+      (me/merge-exp-files! (ff/list-files ballgown-dir {:mode "file"}) exp-fpkm-filepath)
+      (me/merge-exp-files! (ff/list-files count-dir {:mode "file"}) exp-count-filepath)
       (spit parameters-file (json/write-str parameters))
       (comm/write-csv! metadata-file metadata)
-      (let [exp2qcdt-result (exp2qcdt/call-exp2qcdt! exp-filepath metadata-file result-dir)
+      ;;(decompression-tar files-qualimap-bam)
+      ;;(decompression-tar files-qualimap-RNA)
+      (doseq [files-qualimap-bam-tar (ff/batch-filter-files qualimap-bam-dir [".*tar.gz"])]
+        (decompression-tar files-qualimap-bam-tar))
+      (doseq [files-qualimap-RNA-tar (ff/batch-filter-files qualimap-RNA-dir [".*tar.gz"])]
+        (decompression-tar files-qualimap-RNA-tar))
+      (let [exp2qcdt-result (exp2qcdt/call-exp2qcdt! exp-fpkm-filepath exp-count-filepath metadata-file result-dir)
             multiqc-result (if (= (:status exp2qcdt-result) "Success")
-                             (mq/multiqc result-dir dest-dir {:config config :template "quartet_rnaseq_report"})
+                             (mq/multiqc result-dir dest-dir {:config config :template "default" :title "Quartet RNA report"})
+                             ;;(mq/multiqc result-dir)
                              exp2qcdt-result)
             result {:status (:status multiqc-result)
                     :msg (:msg multiqc-result)}

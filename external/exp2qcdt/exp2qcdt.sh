@@ -20,19 +20,23 @@ set -o pipefail
 
 show_help(){
 cat << EOF
-usage: $(echo $0) [-e <EXP_FILE>] [-m <META_FILE>] [-o <RESULT_DIR>]
-       -e EXP_FILE Expression table file.
+usage: $(echo $0) [-e <FPKM_FILE>] [-c <COUNT_FILE>][-m <META_FILE>] [-o <RESULT_DIR>]
+       -e FPKM_FILE Fpkm table file.
+       -c COUNT_FILE Count table file
        -m META_FILE Metadata file.
        -o RESULT_DIR A directory for result files.
 EOF
 }
 
-while getopts ":he:m:o:" arg
+while getopts ":he:c:m:o:" arg
 do
 	case "$arg" in
 		"e")
-			EXP_FILE="$OPTARG"
+			FPKM_FILE="$OPTARG"
 			;;
+		"c")
+		  COUNT_FILE="$OPTARG"
+		  ;;
 		"m")
 			META_FILE="$OPTARG"
 			;;
@@ -58,14 +62,24 @@ do
 	esac
 done
 
-if [ -z "$EXP_FILE" ]; then
+if [ -z "$FPKM_FILE" ]; then
   echo "-e argument is not specified."
   exit 1
-elif [ ! -f "$EXP_FILE" ]; then
-  echo "$EXP_FILE is not a valid file."
+elif [ ! -f "$FPKM_FILE" ]; then
+  echo "$FPKM_FILE is not a valid file."
   exit 1
 else
-  EXP_FILE=`realpath $EXP_FILE`
+  FPKM_FILE=`realpath $FPKM_FILE`
+fi
+
+if [ -z "$COUNT_FILE" ]; then
+  echo "-c argument is not specified."
+  exit 1
+elif [ ! -f "$COUNT_FILE" ]; then
+  echo "$COUNT_FILE is not a valid file."
+  exit 1
+else
+  COUNT_FILE=`realpath $COUNT_FILE`
 fi
 
 if [ -z "$META_FILE" ]; then
@@ -99,7 +113,7 @@ run <- function() {
 	on.exit(traceback())
 	library(exp2qcdt)
 	print("Running...")
-	exp2qcdt("$EXP_FILE", "$META_FILE", "$RESULT_DIR")
+	exp2qcdt("$FPKM_FILE", "$COUNT_FILE", "$META_FILE", "$RESULT_DIR")
 }
 
 run()

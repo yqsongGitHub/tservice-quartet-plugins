@@ -8,6 +8,9 @@
       }
     ]
   },
+  "Bioconductor": {
+    "Version": "3.10"
+  },
   "Packages": {
     "BH": {
       "Package": "BH",
@@ -15,6 +18,19 @@
       "Source": "Repository",
       "Repository": "CRAN",
       "Hash": "8f9ce74c6417d61f0782cbae5fd2b7b0"
+    },
+    "BiocManager": {
+      "Package": "BiocManager",
+      "Version": "1.30.12",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "462dbb15753eb52fb62e28507f382d2d"
+    },
+    "BiocVersion": {
+      "Package": "BiocVersion",
+      "Version": "3.10.1",
+      "Source": "Bioconductor",
+      "Hash": "b69e4e634db423b8e6c58103d579ec95"
     },
     "DT": {
       "Package": "DT",
@@ -233,6 +249,12 @@
       "Repository": "CRAN",
       "Hash": "d0509913b27ea898189ee664b6030dc2"
     },
+    "edgeR": {
+      "Package": "edgeR",
+      "Version": "3.28.1",
+      "Source": "Bioconductor",
+      "Hash": "89c7b7cf2495fd8a434f6d0b40ec5060"
+    },
     "ellipsis": {
       "Package": "ellipsis",
       "Version": "0.3.1",
@@ -249,15 +271,15 @@
     },
     "exp2qcdt": {
       "Package": "exp2qcdt",
-      "Version": "0.1.0",
+      "Version": "0.2.0",
       "Source": "GitHub",
       "RemoteType": "github",
       "RemoteHost": "api.github.com",
-      "RemoteUsername": "clinico-omics",
       "RemoteRepo": "exp2qcdt",
-      "RemoteRef": "e8d444b15084cab33f7d47312fa5325fa3378df8",
-      "RemoteSha": "e8d444b15084cab33f7d47312fa5325fa3378df8",
-      "Hash": "6bf8e63bedb101f09866f2203327e9b2"
+      "RemoteUsername": "clinico-omics",
+      "RemoteRef": "HEAD",
+      "RemoteSha": "06d4182fa67072ae88fa38cefbca1dd134c5937e",
+      "Hash": "133afbb552bd320c13231b304689bad8"
     },
     "fansi": {
       "Package": "fansi",
@@ -447,6 +469,19 @@
       "Source": "Repository",
       "Repository": "CRAN",
       "Hash": "361811f31f71f8a617a9a68bf63f1f42"
+    },
+    "limma": {
+      "Package": "limma",
+      "Version": "3.42.2",
+      "Source": "Bioconductor",
+      "Hash": "d56e7c663eb11536c78fe2f25d9fa544"
+    },
+    "locfit": {
+      "Package": "locfit",
+      "Version": "1.5-9.4",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "760b5b542e8435237d1b3c253bfe18e7"
     },
     "magrittr": {
       "Package": "magrittr",
