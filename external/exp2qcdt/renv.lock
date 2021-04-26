@@ -271,15 +271,15 @@
     },
     "exp2qcdt": {
       "Package": "exp2qcdt",
-      "Version": "0.2.0",
+      "Version": "0.2.2",
       "Source": "GitHub",
       "RemoteType": "github",
       "RemoteHost": "api.github.com",
       "RemoteRepo": "exp2qcdt",
       "RemoteUsername": "clinico-omics",
       "RemoteRef": "HEAD",
-      "RemoteSha": "06d4182fa67072ae88fa38cefbca1dd134c5937e",
-      "Hash": "133afbb552bd320c13231b304689bad8"
+      "RemoteSha": "319a5eba8f9b5b5e3355ac8045f573a400627583",
+      "Hash": "781e42049aa1c8881c721f121559f9ec"
     },
     "fansi": {
       "Package": "fansi",
