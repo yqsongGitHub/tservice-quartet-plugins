@@ -221,6 +221,13 @@
       {:status status
        :msg msg})))
 
+(defn- filter-mkdir-copy
+  [fmc-datadir fmc-patterns fmc-destdir fmc-newdir]
+  (let [files-keep (ff/batch-filter-files fmc-datadir fmc-patterns)
+        files-keep-dir (fs-lib/join-paths fmc-destdir fmc-newdir)]
+    (fs-lib/create-directories! files-keep-dir)
+    (ff/copy-files! files-keep files-keep-dir {:replace-existing true})))
+
 (defn- quartet-rnaseq-report!
   "Chaining Pipeline: filter-files -> copy-files -> merge_exp_file -> exp2qcdt -> multiqc."
   [datadir parameters metadata dest-dir]
@@ -231,50 +238,34 @@
         parameters-file (fs-lib/join-paths dest-dir
                                            "results"
                                            "general-info.json")
-        files-fpkm (ff/batch-filter-files datadir [".*call-ballgown/.*.txt"])
-        files-count (ff/batch-filter-files datadir [".*call-count/.*gene_count_matrix.csv"])
-        files-qualimap-bam (ff/batch-filter-files datadir [".*call-qualimapBAMqc/.*tar.gz"])
-        files-qualimap-RNA (ff/batch-filter-files datadir [".*call-qualimapRNAseq/.*tar.gz"])
-        files-fastqc (ff/batch-filter-files datadir [".*call-fastqc/.*.zip"])
-        files-fastqscreen (ff/batch-filter-files datadir [".*call-fastqscreen/.*.txt"])
         ballgown-dir (fs-lib/join-paths dest-dir "ballgown")
         count-dir (fs-lib/join-paths dest-dir "count")
         exp-fpkm-filepath (fs-lib/join-paths dest-dir "fpkm.txt")
         exp-count-filepath (fs-lib/join-paths dest-dir "count.txt")
         result-dir (fs-lib/join-paths dest-dir "results")
-        qualimap-bam-dir (fs-lib/join-paths result-dir "post_alignment_qc/qualimap_bam")
-        qualimap-RNA-dir (fs-lib/join-paths result-dir "post_alignment_qc/qualimap_rnaseq")
-        fastqc-dir (fs-lib/join-paths result-dir "rawqc/fastq_screen")
-        fastqscreen-dir (fs-lib/join-paths result-dir "rawqc/fastqc")
         log-path (fs-lib/join-paths dest-dir "log")
         config (fs-lib/join-paths (:tservice-plugin-path env) "plugins/config/quartet_rnaseq_report.yaml")]
     (try
-      (fs-lib/create-directories! ballgown-dir)
-      (fs-lib/create-directories! count-dir)
       (fs-lib/create-directories! result-dir)
-      (fs-lib/create-directories! qualimap-bam-dir)
-      (fs-lib/create-directories! qualimap-RNA-dir)
-      (fs-lib/create-directories! fastqc-dir)
-      (fs-lib/create-directories! fastqscreen-dir)
-      (log/info "Merge these files: " files-fpkm)
+      (log/info "Merge these files")
       (log/info "Merge gene experiment files from ballgown directory to a experiment table: " ballgown-dir exp-fpkm-filepath)
-      (log/info "Merge these files: " files-count)
+      (log/info "Merge these files")
       (log/info "Merge gene experiment files from count directory to a experiment table: " count-dir exp-count-filepath)
-      (ff/copy-files! files-fpkm ballgown-dir {:replace-existing true})
-      (ff/copy-files! files-count count-dir {:replace-existing true})
-      (ff/copy-files! files-qualimap-bam qualimap-bam-dir {:replace-existing true})
-      (ff/copy-files! files-qualimap-RNA qualimap-RNA-dir {:replace-existing true})
-      (ff/copy-files! files-fastqc fastqc-dir {:replace-existing true})
-      (ff/copy-files! files-fastqscreen fastqscreen-dir {:replace-existing true})
+      (filter-mkdir-copy datadir [".*call-ballgown/.*.txt"] dest-dir "ballgown")
+      (filter-mkdir-copy datadir [".*call-count/.*gene_count_matrix.csv"] dest-dir "count")
+      (filter-mkdir-copy datadir [".*call-qualimapBAMqc/.*tar.gz"] dest-dir "results/post_alignment_qc/qualimap_bam")
+      (filter-mkdir-copy datadir [".*call-qualimapRNAseq/.*tar.gz"] dest-dir "results/post_alignment_qc/qualimap_rnaseq")
+      (filter-mkdir-copy datadir [".*call-fastqc/.*.zip"] dest-dir "results/rawqc/fastqc")
+      (filter-mkdir-copy datadir [".*call-fastqscreen/.*.txt"] dest-dir "results/rawqc/fastq_screen")
       (me/merge-exp-files! (ff/list-files ballgown-dir {:mode "file"}) exp-fpkm-filepath)
       (me/merge-exp-files! (ff/list-files count-dir {:mode "file"}) exp-count-filepath)
       (spit parameters-file (json/write-str parameters))
       (comm/write-csv! metadata-file metadata)
       ;;(decompression-tar files-qualimap-bam)
       ;;(decompression-tar files-qualimap-RNA)
-      (doseq [files-qualimap-bam-tar (ff/batch-filter-files qualimap-bam-dir [".*tar.gz"])]
+      (doseq [files-qualimap-bam-tar (ff/batch-filter-files (fs-lib/join-paths dest-dir "results/post_alignment_qc/qualimap_bam") [".*tar.gz"])]
         (decompression-tar files-qualimap-bam-tar))
-      (doseq [files-qualimap-RNA-tar (ff/batch-filter-files qualimap-RNA-dir [".*tar.gz"])]
+      (doseq [files-qualimap-RNA-tar (ff/batch-filter-files (fs-lib/join-paths dest-dir "results/post_alignment_qc/qualimap_rnaseq") [".*tar.gz"])]
         (decompression-tar files-qualimap-RNA-tar))
       (let [exp2qcdt-result (exp2qcdt/call-exp2qcdt! exp-fpkm-filepath exp-count-filepath metadata-file result-dir)
             multiqc-result (if (= (:status exp2qcdt-result) "Success")
